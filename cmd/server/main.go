@@ -14,9 +14,9 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var (
 		clientId = os.Getenv("CLIENT_ID")
-		authUri = os.Getenv("AUTHORIZE_URI")
-		tokenUri = os.Getenv("TOKEN_URI")
-		userInfoUri = os.Getenv("USERINFO_URI")
+		authUri = os.Getenv("AUTHORIZATION_ENDPOINT")
+		tokenUri = os.Getenv("TOKEN_ENDPOINT")
+		userInfoUri = os.Getenv("USERINFO_ENDPOINT")
 		clientAssertionType = os.Getenv("CLIENT_ASSERTION_TYPE")
 		redirectUri = os.Getenv("REDIRECT_URI")
 	)
