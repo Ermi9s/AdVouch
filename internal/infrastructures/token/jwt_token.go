@@ -1,79 +1,68 @@
 package token
 
 import (
-    "crypto/rsa"
-    "encoding/base64"
-    "fmt"
-    "os"
-    "time"
+	"crypto/rand"
+	"crypto/rsa"
+	"log"
+	"time"
 
-    "github.com/golang-jwt/jwt/v4"
-    "github.com/lestrrat-go/jwx/jwk"
-
+	"github.com/golang-jwt/jwt/v5"
 )
 
-type FaydaJWT struct {
-    privateKey *rsa.PrivateKey
-    clientID   string
-    tokenURL   string
+
+
+type JWTtoken struct {
+    Private *rsa.PrivateKey
+    Public *rsa.PublicKey
 }
 
 
-func NewFaydaJWT() (*FaydaJWT, error) {
-    privateKey := os.Getenv("FAYDA_OAUTH_PRIVATE_KEY")
-    clientID := os.Getenv("FAYDA_OAUTH_CLIENT_ID")
-    tokenURL := os.Getenv("FAYDA_TOKEN_URL")
-
-    if privateKey == "" || clientID == "" || tokenURL == "" {
-        return nil, fmt.Errorf("missing required environment variables")
-    }
-
-    privateKeyBytes, err := base64.StdEncoding.DecodeString(privateKey)
+func NewJWT() (*JWTtoken, error) {
+    privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
     if err != nil {
-        return nil, fmt.Errorf("failed to decode base64 private key: %w", err)
+        log.Println("Error generating RSA key:", err)
+        return &JWTtoken{}, err
     }
+    publicKey := &privateKey.PublicKey
 
-    rsaPrivateKey, err := parseJWKPrivateKey(privateKeyBytes)
-    if err != nil {
-        return nil, fmt.Errorf("failed to parse private key from JWK: %w", err)
-    }
-
-    return &FaydaJWT{
-        privateKey: rsaPrivateKey,
-        clientID:   clientID,
-        tokenURL:   tokenURL,
+    return &JWTtoken{
+        Private: privateKey,
+        Public: publicKey,
     }, nil
 }
 
 
-func (f *FaydaJWT) GenerateClientAssertion() (string, error) {
-    claims := jwt.MapClaims{
-        "iss": f.clientID,
-        "aud": f.tokenURL,
-        "sub": f.clientID,
-        "exp": time.Now().Add(time.Minute * 5).Unix(), 
-        "iat": time.Now().Unix(),
+
+func (jwtT *JWTtoken)CreateToken(payload map[string]interface{}, expire_after_hours int, sessionId string) (string, string, error) {
+    accessClaims := jwt.MapClaims{
+        "sub" : sessionId,
+        "iss" : "adVouch-AuthServer",
+        "user" : payload,
+        "exp" : time.Now().Add(time.Duration(expire_after_hours) * time.Hour).Unix(),
     }
 
-    clientAssert := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-    return clientAssert.SignedString(f.privateKey)
-}
+    accessToken := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims)
 
-func parseJWKPrivateKey(jwkData []byte) (*rsa.PrivateKey, error) {
-    key, err := jwk.ParseKey(jwkData)
+    accessTokenString, err := accessToken.SignedString(jwtT.Private);
     if err != nil {
-        return nil, fmt.Errorf("failed to parse JWK: %w", err)
+        log.Println("Error generating access token string: ", err)
+        return "","",err
+    }   
+
+
+    refreshClaims := jwt.MapClaims{
+        "sub" : sessionId,
+        "iss" : "adVouch-AuthServer",
+        "exp" : time.Now().Add(time.Duration(24) * time.Hour).Unix(),
     }
 
-    var rawKey interface{}
-    if err := key.Raw(&rawKey); err != nil {
-        return nil, fmt.Errorf("failed to extract raw key: %w", err)
-    }
+    refreshToken := jwt.NewWithClaims(jwt.SigningMethodRS256, refreshClaims)
 
-    rsaKey, ok := rawKey.(*rsa.PrivateKey)
-    if !ok {
-        return nil, fmt.Errorf("extracted key is not an RSA private key (type: %T)", rawKey)
-    }
+    refreshTokenString, err := refreshToken.SignedString(jwtT.Private);
+    if err != nil {
+        log.Println("Error generating access token string: ", err)
+        return "","",err
+    } 
 
-    return rsaKey, nil
+    return accessTokenString, refreshTokenString, nil
 }

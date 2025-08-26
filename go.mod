@@ -4,7 +4,7 @@ go 1.24.5
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/gorilla/mux v1.8.1
 	github.com/lestrrat-go/jwx v1.2.31
 	github.com/redis/go-redis/v9 v9.12.1

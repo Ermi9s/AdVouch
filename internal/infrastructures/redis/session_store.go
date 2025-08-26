@@ -35,7 +35,7 @@ func NewRedisClient() *RedisClient {
 	return &RedisClient{Client: client, Ctx: ctx}
 }
 
-func (rc *RedisClient) SetHash(key string, values map[string]string, expiration int) error {
+func (rc *RedisClient) SetHash(key string, values map[string]interface{}, expiration int) error {
 	pipe := rc.Client.Pipeline()
 	for k, v := range values {
 		pipe.HSet(rc.Ctx, key, k, v)
