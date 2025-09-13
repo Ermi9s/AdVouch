@@ -1,9 +1,9 @@
 package redis
 
-
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -19,15 +19,26 @@ func NewRedisClient() *RedisClient {
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
 
-	redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort)
-	fmt.Println("Connecting to Redis at:", redisAddr)
 
-	client := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-	})
+	var err error
+	var client *redis.Client
 	ctx := context.Background()
 
-	_, err := client.Ping(ctx).Result()
+	for i := 0; i < 5; i++ {
+		redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+		log.Printf("Connecting to Redis at: %s attempt %d", redisAddr, i+1)
+
+		client = redis.NewClient(&redis.Options{
+			Addr: redisAddr,
+		})
+		
+
+		_, err = client.Ping(ctx).Result()
+		if err == nil {
+			break
+		}
+	}
+
 	if err != nil {
 		panic(err)
 	}
