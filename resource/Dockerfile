@@ -19,5 +19,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# for dev; for prod, use gunicorn/uwsgi
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+ENTRYPOINT ["/app/entrypoint.sh"]

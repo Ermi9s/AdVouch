@@ -38,7 +38,7 @@ class Media(models.Model):
     
     
 class Review(models.Model):
-    ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name='media_files')
+    ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name='ad_review')
     content = models.TextField()
     retting = models.IntegerField(default=3) #normally scaled 1-5 in the front end, anything above 5 shoule be interprated as 5
 

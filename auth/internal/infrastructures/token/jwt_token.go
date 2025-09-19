@@ -1,9 +1,9 @@
 package token
 
 import (
-	"crypto/rand"
 	"crypto/rsa"
 	"log"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -13,21 +13,24 @@ import (
 
 type JWTtoken struct {
     Private *rsa.PrivateKey
-    Public *rsa.PublicKey
 }
 
 
 func NewJWT() (*JWTtoken, error) {
-    privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-    if err != nil {
-        log.Println("Error generating RSA key:", err)
-        return &JWTtoken{}, err
-    }
-    publicKey := &privateKey.PublicKey
+	privData, err := os.ReadFile("/auth/private.pem") // update later, mount needed
+	if err != nil {
+		log.Println("Error reading private key file:", err)
+		return nil, err
+	}
+
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privData)
+	if err != nil {
+		log.Println("Error parsing private key:", err)
+		return nil, err
+	}
 
     return &JWTtoken{
         Private: privateKey,
-        Public: publicKey,
     }, nil
 }
 
