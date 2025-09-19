@@ -104,12 +104,12 @@ func (h *FaydaOAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 	authURL := h.AuthorizeURL + "?" + authParams.Encode()
 	log.Printf("[INFO] Authorize: Generated authURL=%s", authURL)
 
-	body := map[string]string{
-		"message":     "Redirecting to Fayda Esignet",
-		"auth_url":    authURL,
-		"session_id":  sessionID,
-		"utm_referer": request_referer,
-		"utm_source":  request_origin,
+	body := map[string]interface{}{
+		"message": "Redirecting to Fayda Esignet",
+		"data": map[string]string{
+			"auth_url":   authURL,
+			"session_id": sessionID,
+		},
 	}
 
 	byte_body, err := json.Marshal(body)
@@ -451,10 +451,12 @@ func (h *FaydaOAuthHandler) Authenticate(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	returnBody := map[string]string{
-		"message":       "User Authenticated sucessfully",
-		"access_token":  accessToken,
-		"refresh_token": refreshToekn,
+	returnBody := map[string]interface{}{
+		"message": "User Authenticated sucessfully",
+		"data": map[string]string{
+			"access_token":  accessToken,
+			"refresh_token": refreshToekn,
+		},
 	}
 	byte_body, _ := json.Marshal(returnBody)
 	w.Write(byte_body)
@@ -657,7 +659,7 @@ func (h *FaydaOAuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, refreshToekn, err := h.TokenClient.CreateToken(userInfo, 1, sub)
+	accessToken, refreshToken, err := h.TokenClient.CreateToken(userInfo, 1, sub)
 	if err != nil {
 		log.Printf("[ERROR] Refresh: Failed to create token: %v", err)
 		w.WriteHeader(500)
@@ -676,12 +678,15 @@ func (h *FaydaOAuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	body = map[string]string{
-		"message":       "refresh successful",
-		"access_token":  accessToken,
-		"refresh_token": refreshToekn,
-	} 
-	byte_body, _ := json.Marshal(body)
+	newBody := map[string]interface{}{
+		"message": "refresh successful",
+		"data": map[string]string{
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+		},
+	}
+
+	byte_body, _ := json.Marshal(newBody)
 	w.Write(byte_body)
 
 }

@@ -1,5 +1,5 @@
 services:
-  go-main:
+  auth:
     build:
       context: ./auth
       dockerfile: Dockerfile
@@ -17,11 +17,25 @@ services:
       - CLIENT_ASSERTION_TYPE=urn:ietf:params:oauth:client-assertion-type:jwt-bearer  
       - REDIRECT_URL=http://localhost:3000
     networks:
-      - auth-network
+      - advouch-network
     depends_on:
       redis:
         condition: service_healthy
+    
 
+  resource:
+    build:
+      context: ./resource
+      dockerfile: dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    
+    networks:
+      - advouch-network
+    
+  
   redis:
     image: redis:7
     restart: always
@@ -30,7 +44,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - auth-network
+      - advouch-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -42,5 +56,5 @@ volumes:
     driver: local
 
 networks:
-  auth-network:
+  advouch-network:
     driver: bridge

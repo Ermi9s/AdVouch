@@ -26,9 +26,9 @@ func Run(port string, authConfig *config.AuthConfig, redis *redis.RedisClient) {
 	)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/authorize", controller.Authorize).Methods("GET", "OPTIONS")
-	router.HandleFunc("/authenticate", controller.Authenticate).Methods("POST", "OPTIONS")
-	router.HandleFunc("/refresh", controller.Refresh).Methods("POST", "OPTIONS")
+	router.HandleFunc("api/v1/authorize", controller.Authorize).Methods("GET", "OPTIONS")
+	router.HandleFunc("api/v1/authenticate", controller.Authenticate).Methods("POST", "OPTIONS")
+	router.HandleFunc("api/v1/refresh", controller.Refresh).Methods("POST", "OPTIONS")
 
     log.Printf("Server running on port %s", port)
     if err := http.ListenAndServe(":"+port, router); err != nil {
