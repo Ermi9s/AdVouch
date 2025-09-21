@@ -3,20 +3,18 @@ services:
     build:
       context: ./auth
       dockerfile: Dockerfile
-    
     ports:
       - "8080:8080"
-    
     env_file:
       - ./auth/.env
-
     networks:
       - advouch-network
     depends_on:
       redis:
         condition: service_healthy
+      db:
+        condition: service_healthy
     
-
   resource:
     build:
       context: ./resource
@@ -25,11 +23,47 @@ services:
       - "8000:8000"
     env_file:
       - ./resource/.env
-    
     networks:
       - advouch-network
+    depends_on:
+      db:
+        condition: service_healthy
     
-  
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    networks:
+      - advouch-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - advouch-network
+
+    depends_on:
+      db:
+        condition: service_healthy
+
   redis:
     image: redis:7
     restart: always
@@ -47,6 +81,8 @@ services:
 
 volumes:
   redis_data:
+    driver: local
+  postgres_data:
     driver: local
 
 networks:

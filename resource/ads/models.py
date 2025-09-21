@@ -10,8 +10,8 @@ class Ad(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     share_count = models.IntegerField(default=0)
-    business = models.ForeignKey('businesses.Business', on_delete=models.CASCADE, related_name='ads')
-    owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='user_ads', null=True)
+    # business = models.ForeignKey('businesses.Business', on_delete=models.CASCADE, related_name='ads')
+    # owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='user_ads', null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')  
     created_at = models.DateTimeField(auto_now_add=True)
 

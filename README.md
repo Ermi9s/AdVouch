@@ -3,6 +3,14 @@ This project has multiple services
 
 - auth
 - resource
+- web
+
+There are also other services such as redis, postgres and pgadmin in the docker-compose. 
+To ru this project clone the repo, setup your .env files where the .env.examples are present according to the the specified keys in the .env.example.
+
+then simply run `docker compose up --build`
+NOTE: You will have to have docker installed in your machine.
+
 
 ## The `auth` service
 
