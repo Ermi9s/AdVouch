@@ -18,11 +18,12 @@ class AdSerializer(serializers.ModelSerializer):
             'title',
             'description',
             'share_count',
-            # 'business',
-            # 'owner',
+            'business',
+            'owner',
             'status',
             'created_at',
             'media_files',
+            'created_at'
         ]
 
     def create(self, validated_data):
