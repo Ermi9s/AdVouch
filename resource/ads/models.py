@@ -9,6 +9,7 @@ class Ad(models.Model):
 
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
+
     share_count = models.BigIntegerField(default=0)
     business = models.ForeignKey('business.Business', on_delete=models.CASCADE, related_name='ads')
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='user_ads', null=True)
