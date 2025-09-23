@@ -19,6 +19,7 @@ go.work.sum
 .idea/
 .vscode/
 
+resource/venv
 advenv
 
 private.pem
