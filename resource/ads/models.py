@@ -10,7 +10,7 @@ class Ad(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     share_count = models.BigIntegerField(default=0)
-    business = models.ForeignKey('businesses.Business', on_delete=models.CASCADE, related_name='ads')
+    business = models.ForeignKey('business.Business', on_delete=models.CASCADE, related_name='ads')
     owner = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='user_ads', null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')  
     created_at = models.DateTimeField(auto_now_add=True)
@@ -25,7 +25,7 @@ class Ad(models.Model):
 
 class Media(models.Model):
     ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name='media_files')
-    business = models.ForeignKey('business.Business', on_delete=models.CASCADE, related_name='business-media')
+    business = models.ForeignKey('business.Business', on_delete=models.CASCADE, related_name='business_media')
     url = models.CharField(max_length=1024)
     media_type = models.CharField(
         max_length=20,

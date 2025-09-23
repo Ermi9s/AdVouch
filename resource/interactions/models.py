@@ -2,8 +2,8 @@ from django.db import models
 
 
 class Share(models.Model):
-    ad = models.ForeignKey('ads.Ad', on_delete=models.CASCADE, related_name='ad-share')
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='user-share')
+    ad = models.ForeignKey('ads.Ad', on_delete=models.CASCADE, related_name='ad_share')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='user_share')
     created_at = models.DateTimeField(auto_now_add=True)
 
 
@@ -19,8 +19,8 @@ class Review(models.Model):
 
 
 class ServiceRatting(models.Model):
-    ad = models.ForeignKey('ads.Ad', on_delete=models.CASCADE, related_name='ad_review')
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='reviewer')
+    ad = models.ForeignKey('ads.Ad', on_delete=models.CASCADE, related_name='ad_rratting')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='ratting')
     ratting = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     
