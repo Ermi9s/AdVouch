@@ -13,6 +13,7 @@ class BussinessSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'description',
+            'location',
             'owner',
             'media_files',
             'created_at'
