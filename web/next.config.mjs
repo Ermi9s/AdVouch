@@ -2,6 +2,12 @@
 const nextConfig = {
   env: {
     NEXT_PUBLIC_USE_MOCK_API: process.env.NODE_ENV === 'development' ? 'true' : 'false',
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+    NEXT_PUBLIC_FAYDA_AUTH_URL: process.env.NEXT_PUBLIC_FAYDA_AUTH_URL,
+    NEXT_PUBLIC_FAYDA_CLIENT_ID: process.env.NEXT_PUBLIC_FAYDA_CLIENT_ID,
+    NEXT_PUBLIC_FAYDA_REDIRECT_URI: process.env.NEXT_PUBLIC_FAYDA_REDIRECT_URI,
+    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
   },
   eslint: {
     ignoreDuringBuilds: true,

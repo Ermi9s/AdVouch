@@ -1,9 +1,11 @@
 import axios from "axios"
 
+// API Base URL from environment
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://advouch.onrender.com"
+
 // Mock data for fallback when API is unavailable
 const mockAuthData = {
-  api_url:
-    "https://mock-fayda-auth.example.com/oauth/authorize?client_id=demo&redirect_uri=http://localhost:3000/login&state=demo_state",
+  api_url: `${process.env.NEXT_PUBLIC_FAYDA_AUTH_URL}?client_id=${process.env.NEXT_PUBLIC_FAYDA_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_FAYDA_REDIRECT_URI}&state=demo_state`,
   session_id: "mock_session_" + Date.now(),
 }
 
@@ -18,7 +20,7 @@ const mockUserData = {
 export const testApiConnection = async () => {
   try {
     console.log("🔍 Testing API connection...")
-    const response = await axios.get("https://advouch.onrender.com/ads")
+    const response = await axios.get(`${API_BASE_URL}/ads`)
     console.log("✅ API connection successful")
     return { status: "online" }
   } catch (error) {
@@ -32,7 +34,7 @@ export const authAPI = {
   getAuthUrl: async () => {
     try {
       console.log("🔐 Getting auth URL...")
-      const response = await axios.get("https://advouch.onrender.com/api/authorize/")
+      const response = await axios.get(`${API_BASE_URL}/api/authorize/`)
       console.log("✅ Auth URL retrieved successfully:", response.data)
       return response.data
     } catch (error) {
@@ -48,7 +50,7 @@ export const authAPI = {
   }) => {
     try {
       console.log("🔐 Authenticating...")
-      const response = await axios.post("https://advouch.onrender.com/api/authenticate/", authData)
+      const response = await axios.post(`${API_BASE_URL}/api/authenticate/`, authData)
       console.log("✅ Authentication successful:", response.data)
       return response.data
     } catch (error) {
@@ -69,7 +71,7 @@ export const businessAPI = {
   getBusinesses: async () => {
     try {
       console.log("🏢 Getting businesses...")
-      const response = await axios.get("https://advouch.onrender.com/api/businesses/")
+      const response = await axios.get(`${API_BASE_URL}/api/businesses/`)
       console.log("✅ Businesses retrieved:", response.data)
       return response.data
     } catch (error) {
@@ -81,7 +83,7 @@ export const businessAPI = {
   getBusiness: async (id: string) => {
     try {
       console.log(`🏢 Getting business ${id}...`)
-      const response = await axios.get(`https://advouch.onrender.com/api/businesses/${id}/`)
+      const response = await axios.get(`${API_BASE_URL}/api/businesses/${id}/`)
       console.log("✅ Business retrieved:", response.data)
       return response.data
     } catch (error) {
@@ -94,7 +96,7 @@ export const businessAPI = {
     try {
       console.log(`🔍 Searching businesses for: ${query}`)
       const response = await axios.get(
-        `https://advouch.onrender.com/api/businesses/search/?q=${encodeURIComponent(query)}`,
+        `${API_BASE_URL}/api/businesses/search/?q=${encodeURIComponent(query)}`,
       )
       console.log("✅ Business search completed:", response.data)
       return response.data
@@ -110,7 +112,7 @@ export const adsAPI = {
   getAds: async () => {
     try {
       console.log("📢 Getting ads...")
-      const response = await axios.get("https://advouch.onrender.com/api/ads/")
+      const response = await axios.get(`${API_BASE_URL}/api/ads/`)
       console.log("✅ Ads retrieved:", response.data)
       return response.data
     } catch (error) {
@@ -122,7 +124,7 @@ export const adsAPI = {
   getAd: async (id: string) => {
     try {
       console.log(`📢 Getting ad ${id}...`)
-      const response = await axios.get(`https://advouch.onrender.com/api/ads/${id}/`)
+      const response = await axios.get(`${API_BASE_URL}/api/ads/${id}/`)
       console.log("✅ Ad retrieved:", response.data)
       return response.data
     } catch (error) {
@@ -134,7 +136,7 @@ export const adsAPI = {
   searchAds: async (query: string) => {
     try {
       console.log(`🔍 Searching ads for: ${query}`)
-      const response = await axios.get(`https://advouch.onrender.com/api/ads/search/?q=${encodeURIComponent(query)}`)
+      const response = await axios.get(`${API_BASE_URL}/api/ads/search/?q=${encodeURIComponent(query)}`)
       console.log("✅ Ad search completed:", response.data)
       return response.data
     } catch (error) {
@@ -152,7 +154,7 @@ export const vouchAPI = {
   }) => {
     try {
       console.log("👍 Submitting vouch...")
-      const response = await axios.post("https://advouch.onrender.com/api/vouchs/", vouchData)
+      const response = await axios.post(`${API_BASE_URL}/api/vouchs/`, vouchData)
       console.log("✅ Vouch submitted:", response.data)
       return response.data
     } catch (error) {
@@ -169,7 +171,7 @@ export const vouchAPI = {
   getBusinessVouchs: async (businessId: string) => {
     try {
       console.log(`👍 Getting vouchs for business ${businessId}...`)
-      const response = await axios.get(`https://advouch.onrender.com/api/businesses/${businessId}/vouchs/`)
+      const response = await axios.get(`${API_BASE_URL}/api/businesses/${businessId}/vouchs/`)
       console.log("✅ Business vouchs retrieved:", response.data)
       return response.data
     } catch (error) {
@@ -181,7 +183,7 @@ export const vouchAPI = {
   getUserVouchs: async () => {
     try {
       console.log("👍 Getting user vouchs...")
-      const response = await axios.get("https://advouch.onrender.com/api/user/vouchs/")
+      const response = await axios.get(`${API_BASE_URL}/api/user/vouchs/`)
       console.log("✅ User vouchs retrieved:", response.data)
       return response.data
     } catch (error) {
@@ -196,7 +198,7 @@ export const userAPI = {
   getProfile: async () => {
     try {
       console.log("👤 Getting user profile...")
-      const response = await axios.get("https://advouch.onrender.com/api/user/profile/")
+      const response = await axios.get(`${API_BASE_URL}/api/user/profile/`)
       console.log("✅ User profile retrieved:", response.data)
       return response.data
     } catch (error) {
@@ -212,7 +214,7 @@ export const userAPI = {
   }) => {
     try {
       console.log("👤 Updating user profile...")
-      const response = await axios.patch("https://advouch.onrender.com/api/user/profile/", profileData)
+      const response = await axios.patch(`${API_BASE_URL}/api/user/profile/`, profileData)
       console.log("✅ User profile updated:", response.data)
       return response.data
     } catch (error) {
