@@ -1,9 +1,18 @@
+export interface User {
+  id: string
+  full_name: string
+  phone_number: string
+  socials: string[] // list of contacts since only phone number is guaranteed from fayda id
+  faydaId: string
+}
+
 export interface Business {
   id: string
   name: string
-  description: string
+  description_text: string
+  location: string // location bearing string
+  owner: User
   category: string
-  location: string
   address: string
   reputationScore: number
   coordinates: {
@@ -24,14 +33,15 @@ export interface Ad {
   id: string
   title: string
   description: string
+  share_count: number // Integer Field default = 0
   category: string
   location: string
-  publishedAt: string
-  businessId?: string // Reference to business if applicable
-  business?: Business // Populated business data
+  business: Business | null // Auto field
+  owner: User // Auto field
+  status: "Draft" | "Archived" | "Active" // Choice field with default "Draft"
+  created_at: string // Auto created field
   imageUrl: string // Make required
   tags: string[]
-  shareCount: number
   vouchCount: number
 }
 
@@ -45,6 +55,13 @@ export interface Comment {
   scoreEffect: number
   isRelevant: boolean
   status: "approved" | "rejected" | "flagged"
+}
+
+export interface Media {
+  url: string
+  ad: Ad | null // if it is media for ad else null
+  business: Business | null // if it is media for business else null
+  media_type: "image" | "video"
 }
 
 export interface Vouch {
