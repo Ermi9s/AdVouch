@@ -9,17 +9,64 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, MapPin, Clock } from "lucide-react"
 import Link from "next/link"
-import type { Ad, Business } from "@/types"
+import type { Ad, Business, User } from "@/types"
 import Image from "next/image"
+
+// Mock users data
+const mockUsers: User[] = [
+  {
+    id: "user-1",
+    full_name: "John Doe",
+    phone_number: "+251 911 123 456",
+    socials: ["john@cleanpro.com", "www.cleanpro.com"],
+    faydaId: "fayda-1",
+  },
+  {
+    id: "user-2",
+    full_name: "Jane Smith",
+    phone_number: "+251 911 987 654",
+    socials: ["jane@autofix.com", "www.autofix.com"],
+    faydaId: "fayda-2",
+  },
+  {
+    id: "user-3",
+    full_name: "Mike Johnson",
+    phone_number: "+251 911 456 789",
+    socials: ["mike@fitlife.com"],
+    faydaId: "fayda-3",
+  },
+  {
+    id: "user-4",
+    full_name: "Sarah Wilson",
+    phone_number: "+251 911 321 098",
+    socials: ["sarah@techsolutions.com", "www.techsolutions.com"],
+    faydaId: "fayda-4",
+  },
+  {
+    id: "user-5",
+    full_name: "David Brown",
+    phone_number: "+251 911 654 321",
+    socials: ["david@gourmetcatering.com"],
+    faydaId: "fayda-5",
+  },
+  {
+    id: "user-6",
+    full_name: "Lisa Garcia",
+    phone_number: "+251 911 789 012",
+    socials: ["lisa@freelance.com"],
+    faydaId: "fayda-6",
+  },
+]
 
 // Mock businesses data
 const mockBusinesses: Business[] = [
   {
     id: "biz-1",
     name: "CleanPro Services",
-    description: "Professional cleaning service with eco-friendly products and experienced staff.",
-    category: "Home Services",
+    description_text: "Professional cleaning service with eco-friendly products and experienced staff.",
     location: "Bole, Addis Ababa",
+    owner: mockUsers[0],
+    category: "Home Services",
     address: "Bole Road, near Edna Mall, Addis Ababa, Ethiopia",
     reputationScore: 87,
     coordinates: { lat: 8.9806, lng: 38.7578 },
@@ -35,9 +82,10 @@ const mockBusinesses: Business[] = [
   {
     id: "biz-2",
     name: "AutoFix Garage",
-    description: "Full-service auto repair shop with certified mechanics and quality parts.",
-    category: "Automotive",
+    description_text: "Full-service auto repair shop with certified mechanics and quality parts.",
     location: "Merkato, Addis Ababa",
+    owner: mockUsers[1],
+    category: "Automotive",
     address: "Merkato Area, Auto Spare Parts District, Addis Ababa, Ethiopia",
     reputationScore: 92,
     coordinates: { lat: 9.0084, lng: 38.7267 },
@@ -53,9 +101,10 @@ const mockBusinesses: Business[] = [
   {
     id: "biz-3",
     name: "FitLife Personal Training",
-    description: "Certified personal trainers offering customized fitness programs.",
-    category: "Health & Wellness",
+    description_text: "Certified personal trainers offering customized fitness programs.",
     location: "Kazanchis, Addis Ababa",
+    owner: mockUsers[2],
+    category: "Health & Wellness",
     address: "Kazanchis Business District, near ECA, Addis Ababa, Ethiopia",
     reputationScore: 23,
     coordinates: { lat: 9.0192, lng: 38.7525 },
@@ -70,9 +119,10 @@ const mockBusinesses: Business[] = [
   {
     id: "biz-4",
     name: "TechSolutions Inc",
-    description: "Modern web development and IT consulting services.",
-    category: "Technology",
+    description_text: "Modern web development and IT consulting services.",
     location: "CMC, Addis Ababa",
+    owner: mockUsers[3],
+    category: "Technology",
     address: "CMC Area, near Friendship City Center, Addis Ababa, Ethiopia",
     reputationScore: 105,
     coordinates: { lat: 9.0054, lng: 38.7636 },
@@ -88,9 +138,10 @@ const mockBusinesses: Business[] = [
   {
     id: "biz-5",
     name: "Gourmet Catering Co",
-    description: "Premium catering services for all occasions with fresh, local ingredients.",
-    category: "Food & Dining",
+    description_text: "Premium catering services for all occasions with fresh, local ingredients.",
     location: "Piassa, Addis Ababa",
+    owner: mockUsers[4],
+    category: "Food & Dining",
     address: "Piassa Area, near St. George Cathedral, Addis Ababa, Ethiopia",
     reputationScore: -45,
     coordinates: { lat: 9.0348, lng: 38.7369 },
@@ -111,14 +162,15 @@ const mockAds: Ad[] = [
     title: "Spring Cleaning Special - 50% Off First Service",
     description:
       "Get your home sparkling clean with our professional spring cleaning service. Eco-friendly products, experienced staff, and satisfaction guaranteed.",
+    share_count: 24,
+    business: mockBusinesses[0],
+    owner: mockUsers[0],
+    status: "Active",
+    created_at: "2024-01-15T10:00:00Z",
     category: "Home Services",
     location: "Bole, Addis Ababa",
-    publishedAt: "2024-01-15T10:00:00Z",
-    businessId: "biz-1",
-    business: mockBusinesses[0],
     imageUrl: "/image.png",
     tags: ["spring-cleaning", "eco-friendly", "discount"],
-    shareCount: 24,
     vouchCount: 18,
   },
   {
@@ -126,14 +178,15 @@ const mockAds: Ad[] = [
     title: "Expert Auto Repair - Free Diagnostic",
     description:
       "Bring your car to our certified mechanics for a free diagnostic check. We specialize in brake repair, oil changes, and engine diagnostics.",
+    share_count: 31,
+    business: mockBusinesses[1],
+    owner: mockUsers[1],
+    status: "Active",
+    created_at: "2024-01-14T14:30:00Z",
     category: "Automotive",
     location: "Merkato, Addis Ababa",
-    publishedAt: "2024-01-14T14:30:00Z",
-    businessId: "biz-2",
-    business: mockBusinesses[1],
     imageUrl: "/image-1.png",
     tags: ["auto-repair", "free-diagnostic", "certified"],
-    shareCount: 31,
     vouchCount: 27,
   },
   {
@@ -141,14 +194,15 @@ const mockAds: Ad[] = [
     title: "Personal Training Sessions - New Year Special",
     description:
       "Transform your health with our certified personal trainers. Customized workout plans and nutrition guidance available.",
+    share_count: 15,
+    business: mockBusinesses[2],
+    owner: mockUsers[2],
+    status: "Active",
+    created_at: "2024-01-13T09:15:00Z",
     category: "Health & Wellness",
     location: "Kazanchis, Addis Ababa",
-    publishedAt: "2024-01-13T09:15:00Z",
-    businessId: "biz-3",
-    business: mockBusinesses[2],
     imageUrl: "/image-2.png",
     tags: ["fitness", "personal-training", "nutrition"],
-    shareCount: 15,
     vouchCount: 12,
   },
   {
@@ -156,14 +210,15 @@ const mockAds: Ad[] = [
     title: "Modern Website Development - Portfolio Available",
     description:
       "Professional web development services using the latest technologies. From simple websites to complex web applications.",
+    share_count: 42,
+    business: mockBusinesses[3],
+    owner: mockUsers[3],
+    status: "Active",
+    created_at: "2024-01-12T16:45:00Z",
     category: "Technology",
     location: "CMC, Addis Ababa",
-    publishedAt: "2024-01-12T16:45:00Z",
-    businessId: "biz-4",
-    business: mockBusinesses[3],
     imageUrl: "/image.png",
     tags: ["web-development", "modern", "portfolio"],
-    shareCount: 42,
     vouchCount: 35,
   },
   {
@@ -171,14 +226,15 @@ const mockAds: Ad[] = [
     title: "Catering Services for Your Next Event",
     description:
       "Premium catering for weddings, corporate events, and private parties. Fresh ingredients and creative menus.",
+    share_count: 8,
+    business: mockBusinesses[4],
+    owner: mockUsers[4],
+    status: "Draft",
+    created_at: "2024-01-11T11:20:00Z",
     category: "Food & Dining",
     location: "Piassa, Addis Ababa",
-    publishedAt: "2024-01-11T11:20:00Z",
-    businessId: "biz-5",
-    business: mockBusinesses[4],
     imageUrl: "/image-1.png",
     tags: ["catering", "events", "premium"],
-    shareCount: 8,
     vouchCount: 3,
   },
   {
@@ -186,21 +242,24 @@ const mockAds: Ad[] = [
     title: "Freelance Graphic Design Services",
     description:
       "Creative graphic design for logos, branding, and marketing materials. Quick turnaround and affordable rates.",
+    share_count: 19,
+    business: null,
+    owner: mockUsers[5],
+    status: "Archived",
+    created_at: "2024-01-10T13:00:00Z",
     category: "Professional Services",
     location: "4 Kilo, Addis Ababa",
-    publishedAt: "2024-01-10T13:00:00Z",
     imageUrl: "/image-2.png",
     tags: ["graphic-design", "freelance", "branding"],
-    shareCount: 19,
     vouchCount: 14,
   },
 ]
 
 export default function HomePage() {
   const [searchType, setSearchType] = useState<"ads" | "businesses">("ads")
-  const [ads, setAds] = useState(mockAds)
+  const [ads, setAds] = useState(mockAds.filter(ad => ad.status === "Active"))
   const [businesses, setBusinesses] = useState(mockBusinesses)
-  const [filteredAds, setFilteredAds] = useState(mockAds)
+  const [filteredAds, setFilteredAds] = useState(mockAds.filter(ad => ad.status === "Active"))
   const [filteredBusinesses, setFilteredBusinesses] = useState(mockBusinesses)
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
@@ -210,8 +269,9 @@ export default function HomePage() {
     setLoading(true)
     setTimeout(() => {
       if (searchType === "ads") {
+        const activeAds = mockAds.filter(ad => ad.status === "Active")
         if (query) {
-          const filtered = ads.filter(
+          const filtered = activeAds.filter(
             (ad) =>
               ad.title.toLowerCase().includes(query.toLowerCase()) ||
               ad.description.toLowerCase().includes(query.toLowerCase()) ||
@@ -219,14 +279,14 @@ export default function HomePage() {
           )
           setFilteredAds(filtered)
         } else {
-          setFilteredAds(ads)
+          setFilteredAds(activeAds)
         }
       } else {
         if (query) {
           const filtered = businesses.filter(
             (business) =>
               business.name.toLowerCase().includes(query.toLowerCase()) ||
-              business.description.toLowerCase().includes(query.toLowerCase()),
+              business.description_text.toLowerCase().includes(query.toLowerCase()),
           )
           setFilteredBusinesses(filtered)
         } else {
@@ -241,11 +301,12 @@ export default function HomePage() {
     setLoading(true)
     setTimeout(() => {
       if (searchType === "ads") {
+        const activeAds = mockAds.filter(ad => ad.status === "Active")
         if (category) {
-          const filtered = ads.filter((ad) => ad.category === category)
+          const filtered = activeAds.filter((ad) => ad.category === category)
           setFilteredAds(filtered)
         } else {
-          setFilteredAds(ads)
+          setFilteredAds(activeAds)
         }
       } else {
         if (category) {
@@ -263,11 +324,12 @@ export default function HomePage() {
     setLoading(true)
     setTimeout(() => {
       if (searchType === "ads") {
+        const activeAds = mockAds.filter(ad => ad.status === "Active")
         if (location) {
-          const filtered = ads.filter((ad) => ad.location.includes(location.split(",")[0]))
+          const filtered = activeAds.filter((ad) => ad.location.includes(location.split(",")[0]))
           setFilteredAds(filtered)
         } else {
-          setFilteredAds(ads)
+          setFilteredAds(activeAds)
         }
       } else {
         if (location) {
@@ -283,7 +345,7 @@ export default function HomePage() {
 
   const handleClearFilters = () => {
     if (searchType === "ads") {
-      setFilteredAds(ads)
+      setFilteredAds(mockAds.filter(ad => ad.status === "Active"))
     } else {
       setFilteredBusinesses(businesses)
     }
@@ -291,7 +353,12 @@ export default function HomePage() {
 
   const handleSearchTypeChange = (type: "ads" | "businesses") => {
     setSearchType(type)
-    handleClearFilters()
+    if (type === "ads") {
+      setAds(mockAds.filter(ad => ad.status === "Active"))
+      setFilteredAds(mockAds.filter(ad => ad.status === "Active"))
+    } else {
+      setFilteredBusinesses(businesses)
+    }
   }
 
   const loadMore = () => {
@@ -390,7 +457,7 @@ export default function HomePage() {
                             </div>
                           </div>
 
-                          <p className="text-muted-foreground text-sm line-clamp-3">{business.description}</p>
+                          <p className="text-muted-foreground text-sm line-clamp-3">{business.description_text}</p>
 
                           <div className="flex items-center justify-between text-sm text-muted-foreground">
                             <div className="flex items-center space-x-1">

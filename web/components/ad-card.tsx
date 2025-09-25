@@ -57,9 +57,24 @@ export function AdCard({ ad }: AdCardProps) {
               </Badge>
             </div>
 
+            {/* Status Badge */}
+            {ad.status !== "Active" && (
+              <div className="absolute top-3 right-3">
+                <Badge
+                  variant={ad.status === "Draft" ? "outline" : "destructive"}
+                  className={`${ad.status === "Draft"
+                    ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                    : "bg-gray-100 text-gray-800"
+                    } backdrop-blur-sm shadow-sm`}
+                >
+                  {ad.status}
+                </Badge>
+              </div>
+            )}
+
             {/* Business Reference */}
             {ad.business && (
-              <div className="absolute top-3 right-3">
+              <div className={`absolute ${ad.status !== "Active" ? "top-12" : "top-3"} right-3`}>
                 <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm text-gray-900 px-2 py-1 rounded-full text-xs">
                   <div className="relative w-4 h-4">
                     <Image
@@ -108,7 +123,7 @@ export function AdCard({ ad }: AdCardProps) {
                   </div>
                   <div className="flex items-center space-x-1">
                     <Clock className="h-3 w-3" />
-                    <span>{new Date(ad.publishedAt).toLocaleDateString()}</span>
+                    <span>{new Date(ad.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
@@ -129,7 +144,7 @@ export function AdCard({ ad }: AdCardProps) {
                     className="flex items-center space-x-1 text-muted-foreground hover:text-primary transition-colors group/share"
                   >
                     <Share2 className="h-4 w-4 group-hover/share:scale-110 transition-transform" />
-                    <span className="text-sm font-medium">{ad.shareCount}</span>
+                    <span className="text-sm font-medium">{ad.share_count}</span>
                   </button>
                 </div>
 

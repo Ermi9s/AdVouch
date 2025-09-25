@@ -29,7 +29,7 @@ const mockAd = {
   location: "Bole, Addis Ababa",
   address: "Bole Road, near Edna Mall, Addis Ababa, Ethiopia",
   reputationScore: 87,
-  publishedAt: "2024-01-15T10:00:00Z",
+  created_at: "2024-01-15T10:00:00Z",
   coordinates: { lat: 8.9806, lng: 38.7578 },
   publisher: {
     name: "CleanPro Services",
@@ -212,7 +212,7 @@ export default function AdDetailPage() {
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-1" />
-                        {new Date(mockAd.publishedAt).toLocaleDateString()}
+                        {new Date(mockAd.created_at).toLocaleDateString()}
                       </div>
                     </div>
                     <Badge variant="secondary" className="mb-4">
