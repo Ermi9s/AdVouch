@@ -1,10 +1,9 @@
 from django.urls import path
-from .views import ListUsers, CreateUser, UpdateUser, DeleteUser
+from .views import ListUsers, DeleteUser, GetMyProfile
 
 
 urlpatterns = [
+    path('me/', GetMyProfile.as_view(), name='get-me'),
     path('user/', ListUsers.as_view(), name='list-users'),
-    path('user/<int:id>/',UpdateUser.as_view(), name='update-use'),
-    path('user/', CreateUser.as_view(), name='create-user'),
-    path('user/', DeleteUser.as_view(), name='delete-user')
+    path('user/<int:id>', DeleteUser.as_view(), name='delete-user')
 ]

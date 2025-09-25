@@ -3,6 +3,7 @@ services:
     build:
       context: ./auth
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "8080:8080"
     env_file:
@@ -19,6 +20,7 @@ services:
     build:
       context: ./resource
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
@@ -31,7 +33,7 @@ services:
     
   db:
     image: postgres:15
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
@@ -42,7 +44,6 @@ services:
       - advouch-network
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -51,7 +52,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
-    restart: always
+    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
@@ -59,14 +60,13 @@ services:
       - "5050:80"
     networks:
       - advouch-network
-
     depends_on:
       db:
         condition: service_healthy
 
   redis:
     image: redis:7
-    restart: always
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
