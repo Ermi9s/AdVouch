@@ -79,18 +79,22 @@ services:
       timeout: 3s
       retries: 5
 
-  nextjs:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-    container_name: advouch-web
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./web:/app
-      - /app/node_modules
-    networks:
-      - advouch-network
+  # nextjs:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile
+  #   container_name: advouch-web
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - AUTH_SERVICE_URL=http://auth:8080
+  #   volumes:
+  #     - ./web:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - advouch-network
+  #   depends_on:
+  #     - auth
 
 
 volumes:

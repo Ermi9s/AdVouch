@@ -28,6 +28,12 @@ type FaydaOAuthHandler struct {
 }
 
 func NewFaydaOAuthHandler(redis *redis.RedisClient, client_id, authorize_url, token_url, user_info_url, client_assertion_type, redirect_uri string) *FaydaOAuthHandler {
+	// Initialize JWT token client
+	jwtToken, err := token.NewJWT()
+	if err != nil {
+		log.Fatalf("Failed to initialize JWT token client: %v", err)
+	}
+
 	return &FaydaOAuthHandler{
 		Redis:               redis,
 		ClientID:            client_id,
@@ -36,6 +42,7 @@ func NewFaydaOAuthHandler(redis *redis.RedisClient, client_id, authorize_url, to
 		UserInfoURL:         user_info_url,
 		ClientAssertionType: client_assertion_type,
 		RedirectURI:         redirect_uri,
+		TokenClient:         jwtToken,
 	}
 }
 
@@ -54,9 +61,8 @@ func (h *FaydaOAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 
 	if redirectURI == "" {
 		log.Printf("[INFO] Authorize: missing redirectURI for origin %s", request_origin)
-		w.WriteHeader(400)
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(400)
 
 		body := map[string]string{
 			"message": fmt.Sprintf("Invalid origin: %s", request_origin),
@@ -80,9 +86,8 @@ func (h *FaydaOAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 	err := h.Redis.SetHash(sessionID, sessionData, 15*60)
 	if err != nil {
 		log.Printf("[ERROR] Authorize: Failed to store session: %v", err)
-		w.WriteHeader(500)
 		w.Header().Set("content-type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(500)
 
 		body := map[string]string{
 			"message": fmt.Sprintf("Failed to store session: %v", err),
@@ -114,9 +119,8 @@ func (h *FaydaOAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 
 	byte_body, err := json.Marshal(body)
 	if err != nil {
-		w.WriteHeader(500)
 		w.Header().Set("content-type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(500)
 
 		body := map[string]string{
 			"message": fmt.Sprintf("Failed to marshal body: %v", err),
@@ -126,9 +130,8 @@ func (h *FaydaOAuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(200)
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(200)
 
 	log.Printf("[INFO] Authorize: Responded with sessionID=%s", sessionID)
 	w.Write(byte_body)
@@ -265,10 +268,26 @@ func (h *FaydaOAuthHandler) Authenticate(w http.ResponseWriter, r *http.Request)
 		"client_assertion_type": {h.ClientAssertionType},
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.PostForm(h.TokenURL, data)
+	// Increase timeout to 60 seconds for Fayda's token endpoint
+	client := &http.Client{Timeout: 60 * time.Second}
+
+	// Retry logic for token request (up to 3 attempts)
+	var resp *http.Response
+	maxRetries := 3
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		log.Printf("[INFO] Authenticate: Token request attempt %d/%d", attempt, maxRetries)
+		resp, err = client.PostForm(h.TokenURL, data)
+		if err == nil {
+			break
+		}
+		if attempt < maxRetries {
+			log.Printf("[WARN] Authenticate: Token request attempt %d failed: %v, retrying...", attempt, err)
+			time.Sleep(2 * time.Second)
+		}
+	}
+
 	if err != nil {
-		log.Printf("[ERROR] Authenticate: Token request failed: %v", err)
+		log.Printf("[ERROR] Authenticate: Token request failed after %d attempts: %v", maxRetries, err)
 		w.WriteHeader(500)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -416,7 +435,17 @@ func (h *FaydaOAuthHandler) Authenticate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	accessToken, refreshToekn, err := h.TokenClient.CreateToken(userInfo, 1, sessionID)
+	// Create a copy of userInfo without the picture for the JWT token
+	// (to avoid huge token sizes that cause header limit errors)
+	userInfoForToken := make(map[string]interface{})
+	for key, value := range userInfo {
+		// Exclude the picture field from the token
+		if key != "picture" {
+			userInfoForToken[key] = value
+		}
+	}
+
+	accessToken, refreshToekn, err := h.TokenClient.CreateToken(userInfoForToken, 1, sessionID)
 	if err != nil {
 		log.Printf("[ERROR] Authenticate: Failed to create token: %v", err)
 		w.WriteHeader(500)
@@ -453,9 +482,10 @@ func (h *FaydaOAuthHandler) Authenticate(w http.ResponseWriter, r *http.Request)
 
 	returnBody := map[string]interface{}{
 		"message": "User Authenticated sucessfully",
-		"data": map[string]string{
+		"data": map[string]interface{}{
 			"access_token":  accessToken,
 			"refresh_token": refreshToekn,
+			"user_info":     userInfo, // Include user info from Fayda
 		},
 	}
 	byte_body, _ := json.Marshal(returnBody)
@@ -659,7 +689,17 @@ func (h *FaydaOAuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, refreshToken, err := h.TokenClient.CreateToken(userInfo, 1, sub)
+	// Create a copy of userInfo without the picture for the JWT token
+	// (to avoid huge token sizes that cause header limit errors)
+	userInfoForToken := make(map[string]interface{})
+	for key, value := range userInfo {
+		// Exclude the picture field from the token
+		if key != "picture" {
+			userInfoForToken[key] = value
+		}
+	}
+
+	accessToken, refreshToken, err := h.TokenClient.CreateToken(userInfoForToken, 1, sub)
 	if err != nil {
 		log.Printf("[ERROR] Refresh: Failed to create token: %v", err)
 		w.WriteHeader(500)

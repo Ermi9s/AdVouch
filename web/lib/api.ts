@@ -1,227 +1,467 @@
-import axios from "axios"
+// API service layer for AdVouch backend
+import { getAccessTokenCache, setAccessTokenCache, refreshToken as refreshAuthToken } from './api-client'
+import type {
+  User,
+  Business,
+  Ad,
+  Offer,
+  Application,
+  Review,
+  Rating,
+  Share,
+  Reputation,
+  PaginatedResponse,
+} from './types'
 
-// API Base URL from environment
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://advouch.onrender.com"
+// Base URLs
+const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_BASE_URL || 'http://localhost:8080'
+const RESOURCE_BASE_URL = process.env.NEXT_PUBLIC_RESOURCE_BASE_URL || 'http://localhost:8000'
 
-// Mock data for fallback when API is unavailable
-const mockAuthData = {
-  api_url: `${process.env.NEXT_PUBLIC_FAYDA_AUTH_URL}?client_id=${process.env.NEXT_PUBLIC_FAYDA_CLIENT_ID}&redirect_uri=${process.env.NEXT_PUBLIC_FAYDA_REDIRECT_URI}&state=demo_state`,
-  session_id: "mock_session_" + Date.now(),
-}
+// Generic API request handler with automatic token refresh
+async function apiRequest<T>(
+  url: string,
+  options: RequestInit = {},
+  useAuth = true
+): Promise<T> {
+  const token = getAccessTokenCache()
 
-const mockUserData = {
-  fayda_id: "DEMO_USER_" + Date.now(),
-  name: "Demo User",
-  email: "demo@example.com",
-  verified: true,
-}
-
-// Simple API test function
-export const testApiConnection = async () => {
-  try {
-    console.log("🔍 Testing API connection...")
-    const response = await axios.get(`${API_BASE_URL}/ads`)
-    console.log("✅ API connection successful")
-    return { status: "online" }
-  } catch (error) {
-    console.log("❌ API connection failed:", error)
-    return { status: "offline" }
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
   }
-}
 
-// Auth API functions
-export const authAPI = {
-  getAuthUrl: async () => {
-    try {
-      console.log("🔐 Getting auth URL...")
-      const response = await axios.get(`${API_BASE_URL}/api/authorize/`)
-      console.log("✅ Auth URL retrieved successfully:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Auth URL request failed, using mock data:", error)
-      return mockAuthData
-    }
-  },
+  if (token && useAuth) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
 
-  authenticate: async (authData: {
-    auth_code: string
-    csrf_token: string
-    session_id: string
-  }) => {
-    try {
-      console.log("🔐 Authenticating...")
-      const response = await axios.post(`${API_BASE_URL}/api/authenticate/`, authData)
-      console.log("✅ Authentication successful:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Authentication failed, using mock data:", error)
-      return mockUserData
-    }
-  },
+  let response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include',
+  })
 
-  mockAuthenticate: async () => {
-    console.log("🎭 Using mock authentication")
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    return mockUserData
-  },
-}
+  // If unauthorized, try to refresh token
+  if (response.status === 401 && useAuth) {
+    const refreshResult = await refreshAuthToken()
 
-// Business API functions
-export const businessAPI = {
-  getBusinesses: async () => {
-    try {
-      console.log("🏢 Getting businesses...")
-      const response = await axios.get(`${API_BASE_URL}/api/businesses/`)
-      console.log("✅ Businesses retrieved:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Businesses request failed, using mock data:", error)
-      return []
-    }
-  },
-
-  getBusiness: async (id: string) => {
-    try {
-      console.log(`🏢 Getting business ${id}...`)
-      const response = await axios.get(`${API_BASE_URL}/api/businesses/${id}/`)
-      console.log("✅ Business retrieved:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Business request failed, using mock data:", error)
-      return null
-    }
-  },
-
-  searchBusinesses: async (query: string) => {
-    try {
-      console.log(`🔍 Searching businesses for: ${query}`)
-      const response = await axios.get(
-        `${API_BASE_URL}/api/businesses/search/?q=${encodeURIComponent(query)}`,
-      )
-      console.log("✅ Business search completed:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Business search failed, using mock data:", error)
-      return []
-    }
-  },
-}
-
-// Ads API functions
-export const adsAPI = {
-  getAds: async () => {
-    try {
-      console.log("📢 Getting ads...")
-      const response = await axios.get(`${API_BASE_URL}/api/ads/`)
-      console.log("✅ Ads retrieved:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Ads request failed, using mock data:", error)
-      return []
-    }
-  },
-
-  getAd: async (id: string) => {
-    try {
-      console.log(`📢 Getting ad ${id}...`)
-      const response = await axios.get(`${API_BASE_URL}/api/ads/${id}/`)
-      console.log("✅ Ad retrieved:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Ad request failed, using mock data:", error)
-      return null
-    }
-  },
-
-  searchAds: async (query: string) => {
-    try {
-      console.log(`🔍 Searching ads for: ${query}`)
-      const response = await axios.get(`${API_BASE_URL}/api/ads/search/?q=${encodeURIComponent(query)}`)
-      console.log("✅ Ad search completed:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Ad search failed, using mock data:", error)
-      return []
-    }
-  },
-}
-
-// Vouch API functions
-export const vouchAPI = {
-  submitVouch: async (vouchData: {
-    business_id: string
-    vouch: string
-  }) => {
-    try {
-      console.log("👍 Submitting vouch...")
-      const response = await axios.post(`${API_BASE_URL}/api/vouchs/`, vouchData)
-      console.log("✅ Vouch submitted:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Vouch submission failed, using mock data:", error)
-      return {
-        id: "mock_vouch_" + Date.now(),
-        ...vouchData,
-        timestamp: new Date().toISOString(),
-        status: "submitted",
+    if (refreshResult) {
+      // Retry request with new token
+      headers['Authorization'] = `Bearer ${refreshResult.access_token}`
+      response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include',
+      })
+    } else {
+      // Refresh failed - redirect to login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth'
       }
+      throw new Error('Authentication failed')
     }
-  },
+  }
 
-  getBusinessVouchs: async (businessId: string) => {
-    try {
-      console.log(`👍 Getting vouchs for business ${businessId}...`)
-      const response = await axios.get(`${API_BASE_URL}/api/businesses/${businessId}/vouchs/`)
-      console.log("✅ Business vouchs retrieved:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ Business vouchs request failed, using mock data:", error)
-      return []
-    }
-  },
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`API Error: ${response.status} - ${error}`)
+  }
 
-  getUserVouchs: async () => {
-    try {
-      console.log("👍 Getting user vouchs...")
-      const response = await axios.get(`${API_BASE_URL}/api/user/vouchs/`)
-      console.log("✅ User vouchs retrieved:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ User vouchs request failed, using mock data:", error)
-      return []
-    }
-  },
+  return response.json()
 }
 
-// User API functions
-export const userAPI = {
-  getProfile: async () => {
-    try {
-      console.log("👤 Getting user profile...")
-      const response = await axios.get(`${API_BASE_URL}/api/user/profile/`)
-      console.log("✅ User profile retrieved:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ User profile request failed, using mock data:", error)
-      return mockUserData
-    }
+// ============================================================================
+// USER API
+// ============================================================================
+
+export const userApi = {
+  getMe: () => apiRequest<User>(`${RESOURCE_BASE_URL}/api/v1/me/`),
+
+  // Sync user profile from OAuth (Fayda eSignet is source of truth)
+  syncProfile: (userInfo: any) =>
+    apiRequest<{ message: string; data: User }>(`${RESOURCE_BASE_URL}/api/v1/me/sync/`, {
+      method: 'POST',
+      body: JSON.stringify(userInfo),
+    }),
+
+  listUsers: (params?: { page?: number; search?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.search) queryParams.append('search', params.search)
+
+    return apiRequest<PaginatedResponse<User>>(
+      `${RESOURCE_BASE_URL}/api/v1/user/?${queryParams}`
+    )
   },
 
-  updateProfile: async (profileData: {
-    name?: string
-    email?: string
-    phone?: string
+  deleteUser: (id: number) =>
+    apiRequest(`${RESOURCE_BASE_URL}/api/v1/user/${id}`, {
+      method: 'DELETE',
+    }),
+}
+
+// ============================================================================
+// BUSINESS API
+// ============================================================================
+
+export const businessApi = {
+  list: (params?: { page?: number; search?: string; owner?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.search) queryParams.append('search', params.search)
+    if (params?.owner) queryParams.append('owner', params.owner.toString())
+    
+    return apiRequest<PaginatedResponse<Business>>(
+      `${RESOURCE_BASE_URL}/api/v1/business/?${queryParams}`
+    )
+  },
+
+  getMyBusinesses: () =>
+    apiRequest<PaginatedResponse<Business>>(
+      `${RESOURCE_BASE_URL}/api/v1/business/my/`
+    ),
+
+  create: (data: Partial<Business>) =>
+    apiRequest<Business>(`${RESOURCE_BASE_URL}/api/v1/business/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<Business>) =>
+    apiRequest<Business>(`${RESOURCE_BASE_URL}/api/v1/business/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiRequest(`${RESOURCE_BASE_URL}/api/v1/business/${id}/`, {
+      method: 'DELETE',
+    }),
+}
+
+// ============================================================================
+// ADS API
+// ============================================================================
+
+export const adsApi = {
+  list: (params?: {
+    page?: number
+    search?: string
+    owner?: number
+    business?: number
+    ordering?: string
   }) => {
-    try {
-      console.log("👤 Updating user profile...")
-      const response = await axios.patch(`${API_BASE_URL}/api/user/profile/`, profileData)
-      console.log("✅ User profile updated:", response.data)
-      return response.data
-    } catch (error) {
-      console.warn("⚠️ User profile update failed, using mock data:", error)
-      return { ...mockUserData, ...profileData }
-    }
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.search) queryParams.append('search', params.search)
+    if (params?.owner) queryParams.append('owner', params.owner.toString())
+    if (params?.business) queryParams.append('business', params.business.toString())
+    if (params?.ordering) queryParams.append('ordering', params.ordering)
+    
+    return apiRequest<PaginatedResponse<Ad>>(
+      `${RESOURCE_BASE_URL}/api/v1/ads/?${queryParams}`
+    )
   },
+
+  getMyAds: () =>
+    apiRequest<PaginatedResponse<Ad>>(
+      `${RESOURCE_BASE_URL}/api/v1/ads/my/`
+    ),
+
+  create: (data: Partial<Ad>) =>
+    apiRequest<Ad>(`${RESOURCE_BASE_URL}/api/v1/ads/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<Ad>) =>
+    apiRequest<Ad>(`${RESOURCE_BASE_URL}/api/v1/ads/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiRequest(`${RESOURCE_BASE_URL}/api/v1/ads/${id}/`, {
+      method: 'DELETE',
+    }),
+
+  getById: (id: string | number) =>
+    apiRequest<Ad>(`${RESOURCE_BASE_URL}/api/v1/ads/${id}/`),
+
+  getEmbedCode: (id: string | number) =>
+    apiRequest<{
+      ad_id: number
+      ad_title: string
+      embed_url: string
+      iframe_code: string
+      direct_link: string
+      preview_url: string
+    }>(`${RESOURCE_BASE_URL}/api/v1/ads/${id}/embed-code/`),
+
+  getExportData: (id: string | number) =>
+    apiRequest<{
+      ad: any
+      business: any
+      branding: any
+      export_info: any
+    }>(`${RESOURCE_BASE_URL}/api/v1/ads/${id}/export/`),
 }
 
-export default axios
+// ============================================================================
+// OFFERS API
+// ============================================================================
+
+export const offersApi = {
+  list: (params?: { page?: number; search?: string; ordering?: string }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.search) queryParams.append('search', params.search)
+    if (params?.ordering) queryParams.append('ordering', params.ordering)
+    
+    return apiRequest<PaginatedResponse<Offer>>(
+      `${RESOURCE_BASE_URL}/api/v1/offer/?${queryParams}`
+    )
+  },
+
+  create: (data: Partial<Offer>) =>
+    apiRequest<Offer>(`${RESOURCE_BASE_URL}/api/v1/offer/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<Offer>) =>
+    apiRequest<Offer>(`${RESOURCE_BASE_URL}/api/v1/offer/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiRequest(`${RESOURCE_BASE_URL}/api/v1/offer/${id}/`, {
+      method: 'DELETE',
+    }),
+}
+
+// ============================================================================
+// APPLICATIONS API
+// ============================================================================
+
+export const applicationsApi = {
+  list: (params?: {
+    page?: number
+    status?: string
+    offer?: number
+    ordering?: string
+  }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.status) queryParams.append('status', params.status)
+    if (params?.offer) queryParams.append('offer', params.offer.toString())
+    if (params?.ordering) queryParams.append('ordering', params.ordering)
+    
+    return apiRequest<PaginatedResponse<Application>>(
+      `${RESOURCE_BASE_URL}/api/v1/application/?${queryParams}`
+    )
+  },
+
+  create: (data: Partial<Application>) =>
+    apiRequest<Application>(`${RESOURCE_BASE_URL}/api/v1/application/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<Application>) =>
+    apiRequest<Application>(`${RESOURCE_BASE_URL}/api/v1/application/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiRequest(`${RESOURCE_BASE_URL}/api/v1/application/${id}/`, {
+      method: 'DELETE',
+    }),
+}
+
+// ============================================================================
+// REVIEWS API
+// ============================================================================
+
+export const reviewsApi = {
+  list: (adId: number, params?: { page?: number; user?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.user) queryParams.append('user', params.user.toString())
+
+    return apiRequest<PaginatedResponse<Review>>(
+      `${RESOURCE_BASE_URL}/api/v1/review/${adId}?${queryParams}`
+    )
+  },
+
+  create: (data: Partial<Review>) =>
+    apiRequest<Review>(`${RESOURCE_BASE_URL}/api/v1/review/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<Review>) =>
+    apiRequest<Review>(`${RESOURCE_BASE_URL}/api/v1/review/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiRequest(`${RESOURCE_BASE_URL}/api/v1/review/${id}/`, {
+      method: 'DELETE',
+    }),
+}
+
+// ============================================================================
+// RATINGS API
+// ============================================================================
+
+export const ratingsApi = {
+  list: (adId: number, params?: { page?: number; user?: number }) => {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.user) queryParams.append('user', params.user.toString())
+
+    return apiRequest<PaginatedResponse<Rating>>(
+      `${RESOURCE_BASE_URL}/api/v1/rating/${adId}?${queryParams}`
+    )
+  },
+
+  create: (data: Partial<Rating>) =>
+    apiRequest<Rating>(`${RESOURCE_BASE_URL}/api/v1/rating/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: Partial<Rating>) =>
+    apiRequest<Rating>(`${RESOURCE_BASE_URL}/api/v1/rating/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiRequest(`${RESOURCE_BASE_URL}/api/v1/rating/${id}/`, {
+      method: 'DELETE',
+    }),
+}
+
+// ============================================================================
+// SHARES API (for tracking ad shares)
+// ============================================================================
+
+export const sharesApi = {
+  create: (data: { ad: number }) =>
+    apiRequest<Share>(`${RESOURCE_BASE_URL}/api/v1/share/create/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+}
+
+// ============================================================================
+// INTERACTION TRACKING API (Public endpoints for analytics)
+// ============================================================================
+
+export const interactionsApi = {
+  /**
+   * Track when a user clicks on an ad
+   */
+  trackClick: (adId: number, referrer?: string) =>
+    apiRequest<{ success: boolean; click_id: number; message: string }>(
+      `${RESOURCE_BASE_URL}/api/v1/track/click/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          ad_id: adId,
+          referrer: referrer || window.location.href,
+          user_agent: navigator.userAgent,
+        }),
+      },
+      false // Don't require authentication for tracking
+    ),
+
+  /**
+   * Track when a user views an ad
+   */
+  trackView: (adId: number) =>
+    apiRequest<{ success: boolean; view_id: number; message: string }>(
+      `${RESOURCE_BASE_URL}/api/v1/track/view/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          ad_id: adId,
+        }),
+      },
+      false // Don't require authentication for tracking
+    ),
+
+  /**
+   * Track when a user shares an ad
+   */
+  trackShare: (adId: number) =>
+    apiRequest<{ success: boolean; share_id: number; message: string }>(
+      `${RESOURCE_BASE_URL}/api/v1/track/share/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          ad_id: adId,
+        }),
+      },
+      false // Don't require authentication for tracking
+    ),
+
+  /**
+   * Track search queries
+   */
+  trackSearch: (query: string, resultsCount?: number, clickedAdId?: number, clickedBusinessId?: number) =>
+    apiRequest<{ success: boolean; search_id: number; message: string }>(
+      `${RESOURCE_BASE_URL}/api/v1/track/search/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          query,
+          results_count: resultsCount,
+          clicked_ad_id: clickedAdId,
+          clicked_business_id: clickedBusinessId,
+        }),
+      },
+      false // Don't require authentication for tracking
+    ),
+}
+
+// ============================================================================
+// REPUTATION API
+// ============================================================================
+
+export const reputationApi = {
+  /**
+   * Get reputation for a specific business
+   */
+  getBusinessReputation: (businessId: number) =>
+    apiRequest<{
+      id: number
+      business_id: number
+      business_name: string
+      share_count: number
+      average_rating: number
+      review_count: number
+      click_count: number
+      view_count: number
+      search_count: number
+      overall_score: number
+      last_updated: string
+    }>(`${RESOURCE_BASE_URL}/api/v1/reputation/business/${businessId}/`),
+
+  /**
+   * Update reputation for a business (owner only)
+   */
+  updateBusinessReputation: (businessId: number) =>
+    apiRequest<{
+      success: boolean
+      message: string
+      reputation: any
+    }>(`${RESOURCE_BASE_URL}/api/v1/reputation/business/${businessId}/update/`, {
+      method: 'POST',
+    }),
+}
+

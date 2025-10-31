@@ -1,235 +1,187 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Navbar } from "@/components/layout/navbar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/components/auth-provider"
-import { useToast } from "@/hooks/use-toast"
-import { User, Mail, CreditCard, Save, LogOut } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { getUser } from "@/lib/auth"
+import { userApi } from "@/lib/api"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2, User as UserIcon, Mail, Phone, Calendar, Users } from "lucide-react"
+import type { User } from "@/lib/types"
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
-  const { toast } = useToast()
-  const [isEditing, setIsEditing] = useState(false)
-  const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-  })
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  if (!user) {
+  useEffect(() => {
+    const currentUser = getUser()
+    if (!currentUser) {
+      router.push("/auth")
+    } else {
+      setIsCheckingAuth(false)
+      loadProfile()
+    }
+  }, [router])
+
+  const loadProfile = async () => {
+    try {
+      const profile = await userApi.getMe()
+      setUser(profile)
+    } catch (error) {
+      console.error("[Profile] Failed to load profile:", error)
+      // If failed to load profile, user might not be authenticated
+      // Redirect to auth page
+      router.push("/auth")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h1>
-            <p className="text-gray-600 mb-6">Please sign in to view your profile.</p>
-            <Button asChild>
-              <Link href="/login">Sign In</Link>
-            </Button>
-          </div>
-        </main>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     )
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
-  }
-
-  const handleSave = () => {
-    // In a real app, this would update the user profile via API
-    toast({
-      title: "Profile updated",
-      description: "Your profile information has been successfully updated.",
-    })
-    setIsEditing(false)
-  }
-
-  const handleCancel = () => {
-    setFormData({
-      name: user.name,
-      email: user.email,
-      phone: user.phone || "",
-    })
-    setIsEditing(false)
-  }
-
-  const handleLogout = () => {
-    logout()
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    })
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">My Profile</h1>
+            <p className="text-muted-foreground">
+              Your profile information is synced from Fayda eSignet (national identity system)
+            </p>
+          </div>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Settings</h1>
-          <p className="text-gray-600">Manage your account information and preferences.</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Information */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
-                    <User className="h-8 w-8 text-primary-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{user.name}</h3>
-                    <p className="text-gray-600">AdVouch Member</p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        type="text"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                <p className="text-muted-foreground">Loading profile...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Profile Information Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                  <CardDescription>
+                    This information is verified by Fayda eSignet and cannot be edited manually
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <UserIcon className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Full Name</p>
+                      <p className="text-lg font-medium">{user?.full_name || "Not provided"}</p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="faydaId">Fayda ID</Label>
-                      <Input id="faydaId" type="text" value={user.faydaId} disabled className="bg-gray-50" />
-                      <p className="text-xs text-gray-500">Fayda ID cannot be changed</p>
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="text-lg font-medium">{user?.email || "Not provided"}</p>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex justify-end space-x-3">
-                  {isEditing ? (
-                    <>
-                      <Button variant="outline" onClick={handleCancel}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </Button>
-                    </>
-                  ) : (
-                    <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Phone className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Phone Number</p>
+                      <p className="text-lg font-medium">{user?.phone_number || "Not provided"}</p>
+                    </div>
+                  </div>
+
+                  {user?.birthdate && (
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Calendar className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">Date of Birth</p>
+                        <p className="text-lg font-medium">
+                          {new Date(user.birthdate).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Account Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Vouchs Posted</span>
+                  {user?.gender && (
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">Gender</p>
+                        <p className="text-lg font-medium">{user.gender}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Account Information Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Information</CardTitle>
+                  <CardDescription>Your AdVouch account details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Account Created</p>
+                    <p className="text-lg font-medium">
+                      {user?.created_at
+                        ? new Date(user.created_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : "Not available"}
+                    </p>
                   </div>
-                  <span className="font-semibold">5</span>
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <CreditCard className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Reputation Impact</span>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Profile Visibility</p>
+                    <p className="text-lg font-medium">{user?.public ? "Public" : "Private"}</p>
                   </div>
-                  <span className="font-semibold text-green-600">+3</span>
-                </div>
+                </CardContent>
+              </Card>
 
-                <Separator />
-
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 mb-2">Member since</p>
-                  <p className="font-semibold">January 2024</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
-                </Button>
-
-                <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
-                  <Link href="/">
-                    <User className="h-4 w-4 mr-2" />
-                    Discover Services
-                  </Link>
-                </Button>
-
-                <Separator />
-
-                <Button variant="destructive" className="w-full justify-start" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Information Notice */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="pt-6">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Note:</strong> Your personal information is verified and maintained by Fayda eSignet,
+                    Ethiopia's national identity authentication system. This ensures the accuracy and security of your
+                    data. If you need to update your information, please contact Fayda eSignet directly.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   )
 }
+

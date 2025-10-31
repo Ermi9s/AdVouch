@@ -25,10 +25,10 @@ class GetMyBusinesses(ListAPIView):
 
 
 class ListBusiness(ListAPIView):
-    queryset = Business.objects.all()
+    queryset = Business.objects.all().order_by('-created_at')
     pagination_class = BusinessPagination
     serializer_class = BussinessSerializer
-    
+
     filter_backends = [DjangoFilterBackend,filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['name', 'owner']
     search_fields = ['^name', 'description']

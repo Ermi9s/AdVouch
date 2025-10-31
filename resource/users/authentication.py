@@ -14,10 +14,13 @@ class JWTAuthentication(authentication.BaseAuthentication):
 
     def authenticate(self, request):
         auth_header = authentication.get_authorization_header(request)
+
         if not auth_header:
-            return None  
+            return None
+
         try:
             prefix, token = auth_header.decode("utf-8").split(" ")
+
             if prefix.lower() != "bearer":
                 return None
         except ValueError:
@@ -31,53 +34,57 @@ class JWTAuthentication(authentication.BaseAuthentication):
                 token,
                 public_key,
                 algorithms=["RS256"],
-                options={"verify_aud": False}, 
+                options={"verify_aud": False},
             )
         except jwt.ExpiredSignatureError:
             raise exceptions.AuthenticationFailed("Token has expired")
-        except jwt.InvalidTokenError:
-            raise exceptions.AuthenticationFailed("Invalid token")
+        except jwt.InvalidTokenError as e:
+            raise exceptions.AuthenticationFailed(f"Invalid token: {str(e)}")
 
-        phone_number = payload.get("phone_number")  
+        # User data is nested under "user" key in the token
+        user_data = payload.get("user", {})
+
+        phone_number = user_data.get("phone_number")
         if not phone_number:
             raise exceptions.AuthenticationFailed("Phone number not found in token")
 
+        full_name = user_data.get("full_name", "Unknown")
+        email = user_data.get("email", "Unknown")
+        gender = user_data.get("gender", "Unknown")
 
+        # Parse birthdate if present
+        birthdate = None
+        if "birthdate" in user_data and user_data["birthdate"]:
+            try:
+                birthdate = datetime.datetime.strptime(user_data["birthdate"], "%Y/%m/%d").date()
+            except (ValueError, TypeError):
+                try:
+                    # Try alternative format
+                    birthdate = datetime.datetime.strptime(user_data["birthdate"], "%Y-%m-%d").date()
+                except (ValueError, TypeError):
+                    pass
 
-
-        full_name = payload.get("full_name", "Unknown")  
-        email = payload.get("email", "Unknown")
-        gender = payload.get("gender", "Unknown")
-        
-        birthdate = datetime.strptime(payload["birthdate"], "%Y/%m/%d").date()
-
-        
+        # Get or create user
         user, created = User.objects.get_or_create(
-            phone_number = phone_number,
-            email = email,
-            full_name=full_name,
-            birthdate=birthdate,
-            gender=gender,
-            defaults = {
-                "full_name" : full_name,
-                "email" : email,
-                "gender" : gender,
-                "birthdate" : birthdate,
-                
+            phone_number=phone_number,
+            defaults={
+                "full_name": full_name,
+                "email": email,
+                "gender": gender,
+                "birthdate": birthdate,
             }
         )
-        
-        if created:
-            profile_picture_data = payload.get("picture")  
 
-            if profile_picture_data:
-                try:
-                    format, imgstr = profile_picture_data.split(";base64,")  
-                    ext = format.split("/")[-1] 
-                    file = ContentFile(base64.b64decode(imgstr), name=f"{user.full_name}.{ext}")
-                    user.profile_picture.save(file.name, file, save=True)
+        # Update user data if not created (sync with latest OAuth data)
+        if not created:
+            user.full_name = full_name
+            user.email = email
+            user.gender = gender
+            if birthdate:
+                user.birthdate = birthdate
+            user.save()
 
-                except Exception as e:
-                    print("Profile picture save failed:", e)
-            
+        # Note: Profile picture is NOT included in JWT token to avoid huge token sizes
+        # It should be handled separately during the OAuth callback via the sync endpoint
+
         return (user, payload)

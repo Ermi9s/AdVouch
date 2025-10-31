@@ -25,8 +25,8 @@ class Ad(models.Model):
    
 
 class Media(models.Model):
-    ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name='media_files')
-    business = models.ForeignKey('business.Business', on_delete=models.CASCADE, related_name='business_media')
+    ad = models.ForeignKey(Ad, on_delete=models.CASCADE, related_name='media_files', null=True, blank=True)
+    business = models.ForeignKey('business.Business', on_delete=models.CASCADE, related_name='business_media', null=True, blank=True)
     url = models.CharField(max_length=1024)
     media_type = models.CharField(
         max_length=20,

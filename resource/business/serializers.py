@@ -5,7 +5,7 @@ from ads.serializers import MediaSerializer
 
 
 class BussinessSerializer(serializers.ModelSerializer):
-    media_files = MediaSerializer(many=True)
+    media_files = MediaSerializer(many=True, read_only=True, source='business_media')
 
     class Meta:
         model = Business
@@ -18,12 +18,12 @@ class BussinessSerializer(serializers.ModelSerializer):
             'media_files',
             'created_at'
         ]
-    
+
     def create(self, validated_data):
         media_data = validated_data.pop('media_files', [])
         business = Business.objects.create(**validated_data)
-        
+
         for media in media_data:
-            Media.objects.create(business=business, **media)
-        
+            Media.objects.create(business=business, ad=None, **media)
+
         return business

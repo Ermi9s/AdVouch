@@ -1,314 +1,382 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
+import { MapPin, Navigation, X, ExternalLink, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ReputationBadge } from "@/components/reputation-badge"
-import { MapPin, Navigation, Satellite, MapIcon, Building2 } from "lucide-react"
-import type { Business } from "@/types"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import type { Business } from "@/lib/mock-data"
+import { mockAds } from "@/lib/mock-data"
+import Link from "next/link"
+import Image from "next/image"
 
 interface ServiceMapProps {
   businesses: Business[]
-  selectedBusiness?: Business | null
-  onBusinessSelect?: (business: Business) => void
+  selectedBusiness: Business | null
+  onBusinessSelect: (business: Business | null) => void
   height?: string
 }
 
-export function ServiceMap({ businesses, selectedBusiness, onBusinessSelect, height = "400px" }: ServiceMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markersRef = useRef<any[]>([])
+function latLngToTile(lat: number, lng: number, zoom: number) {
+  const x = Math.floor(((lng + 180) / 360) * Math.pow(2, zoom))
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) *
+      Math.pow(2, zoom),
+  )
+  return { x, y }
+}
+
+function getMarkerColor(reputation: number): string {
+  if (reputation >= 100) return "bg-green-500"
+  if (reputation >= 60) return "bg-green-500"
+  if (reputation >= 20) return "bg-yellow-500"
+  if (reputation >= -19) return "bg-gray-500"
+  if (reputation >= -59) return "bg-orange-500"
+  return "bg-red-500"
+}
+
+export function ServiceMap({ businesses, selectedBusiness, onBusinessSelect, height = "600px" }: ServiceMapProps) {
+  const [zoom, setZoom] = useState(13)
+  const [center, setCenter] = useState({ lat: 8.9806, lng: 38.7578 }) // Default to Addis Ababa
   const [mapType, setMapType] = useState<"osm" | "satellite">("osm")
-  const [isLoading, setIsLoading] = useState(true)
+  const [hoveredBusiness, setHoveredBusiness] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const mapRef = useRef<HTMLDivElement>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
 
   useEffect(() => {
-    if (!mapRef.current) return
-
-    // Dynamically import Leaflet to avoid SSR issues
-    const initMap = async () => {
-      const L = (await import("leaflet")).default
-
-      // Fix for default markers in Leaflet
-      delete (L.Icon.Default.prototype as any)._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-      })
-
-      // Initialize map - change the default center to Addis Ababa
-      const map = L.map(mapRef.current!).setView([9.0192, 38.7525], 12)
-
-      // OpenStreetMap layer
-      const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-      })
-
-      // ArcGIS Satellite layer
-      const satelliteLayer = L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        {
-          attribution:
-            "Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
-        },
+    if (businesses.length > 0) {
+      // Filter businesses that have valid location coordinates
+      const businessesWithCoords = businesses.filter(
+        (b) => b.location && typeof b.location === 'object' &&
+        typeof b.location.lat === 'number' && typeof b.location.lng === 'number' &&
+        !isNaN(b.location.lat) && !isNaN(b.location.lng)
       )
 
-      // Add default layer
-      if (mapType === "osm") {
-        osmLayer.addTo(map)
-      } else {
-        satelliteLayer.addTo(map)
-      }
-
-      mapInstanceRef.current = { map, osmLayer, satelliteLayer }
-
-      // Add markers for businesses
-      addBusinessMarkers(L, map)
-      setIsLoading(false)
-    }
-
-    initMap()
-
-    return () => {
-      if (mapInstanceRef.current?.map) {
-        mapInstanceRef.current.map.remove()
+      if (businessesWithCoords.length > 0) {
+        const avgLat = businessesWithCoords.reduce((sum, b) => sum + b.location.lat, 0) / businessesWithCoords.length
+        const avgLng = businessesWithCoords.reduce((sum, b) => sum + b.location.lng, 0) / businessesWithCoords.length
+        setCenter({ lat: avgLat, lng: avgLng })
       }
     }
-  }, [])
+  }, [businesses])
 
-  // Update map type when changed
-  useEffect(() => {
-    if (!mapInstanceRef.current) return
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true)
+    setDragStart({ x: e.clientX, y: e.clientY })
+    setDragOffset({ x: 0, y: 0 })
+  }
 
-    const { map, osmLayer, satelliteLayer } = mapInstanceRef.current
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return
 
-    map.eachLayer((layer: any) => {
-      if (layer === osmLayer || layer === satelliteLayer) {
-        map.removeLayer(layer)
-      }
+    const dx = e.clientX - dragStart.x
+    const dy = e.clientY - dragStart.y
+    setDragOffset({ x: dx, y: dy })
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging) return
+
+    const pixelsPerDegree = (256 * Math.pow(2, zoom)) / 360
+    const latOffset = -dragOffset.y / pixelsPerDegree
+    const lngOffset = dragOffset.x / pixelsPerDegree
+
+    setCenter({
+      lat: center.lat + latOffset,
+      lng: center.lng + lngOffset,
     })
 
-    if (mapType === "osm") {
-      osmLayer.addTo(map)
-    } else {
-      satelliteLayer.addTo(map)
-    }
-  }, [mapType])
+    setIsDragging(false)
+    setDragOffset({ x: 0, y: 0 })
+  }
 
-  const addBusinessMarkers = async (L: any, map: any) => {
-    // Clear existing markers
-    markersRef.current.forEach((marker) => map.removeLayer(marker))
-    markersRef.current = []
+  const handleBusinessClick = (business: Business) => {
+    onBusinessSelect(business)
+    setShowDetailModal(true)
+  }
 
-    // Create custom icons based on reputation score
-    const createCustomIcon = (score: number, isVerified: boolean) => {
-      let color = "#6b7280" // gray for neutral
-      if (score >= 100)
-        color = "#22c55e" // green for champion
-      else if (score >= 60)
-        color = "#22c55e" // green for trusted
-      else if (score >= 20)
-        color = "#eab308" // yellow for growing
-      else if (score >= -19)
-        color = "#6b7280" // gray for neutral
-      else if (score >= -59)
-        color = "#f97316" // orange for under watch
-      else color = "#ef4444" // red for poor/not recommended
+  const getBusinessAds = (businessId: string) => {
+    return mockAds.filter((ad) => ad.businessId === businessId)
+  }
 
-      const verifiedBadge = isVerified
-        ? '<div style="position: absolute; top: -2px; right: -2px; background: #22c55e; color: white; border-radius: 50%; width: 8px; height: 8px; border: 1px solid white;"></div>'
-        : ""
+  const centerTile = latLngToTile(center.lat, center.lng, zoom)
+  const tiles = []
+  const tilesX = 4
+  const tilesY = 4
 
-      return L.divIcon({
-        html: `
-          <div style="position: relative;">
-            <div style="
-              background-color: ${color};
-              width: 24px;
-              height: 24px;
-              border-radius: 50%;
-              border: 3px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 10px;
-              font-weight: bold;
-              color: white;
-            ">
-              ${score > 0 ? "+" : ""}${score}
-            </div>
-            ${verifiedBadge}
-          </div>
-        `,
-        className: "custom-marker",
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
+  for (let dx = -Math.floor(tilesX / 2); dx <= Math.floor(tilesX / 2); dx++) {
+    for (let dy = -Math.floor(tilesY / 2); dy <= Math.floor(tilesY / 2); dy++) {
+      tiles.push({
+        x: centerTile.x + dx,
+        y: centerTile.y + dy,
+        offsetX: dx,
+        offsetY: dy,
       })
-    }
-
-    // Add markers for each business
-    businesses.forEach((business) => {
-      const marker = L.marker([business.coordinates.lat, business.coordinates.lng], {
-        icon: createCustomIcon(business.reputationScore, business.isVerified),
-      }).addTo(map)
-
-      // Create popup content
-      const popupContent = `
-  <div class="p-3 min-w-[280px]">
-    <div class="flex items-center space-x-3 mb-2">
-      <div class="relative w-8 h-8 flex-shrink-0">
-        <img src="${business.logoUrl}" alt="${business.name} logo" class="w-full h-full object-cover rounded-lg" />
-      </div>
-      <div class="flex-1">
-        <h3 class="font-semibold text-sm">${business.name}</h3>
-        <span class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">${business.category}</span>
-      </div>
-      <span class="text-xs font-medium ${business.reputationScore >= 60 ? "text-green-600" : business.reputationScore >= 20 ? "text-yellow-600" : business.reputationScore >= -19 ? "text-gray-600" : "text-red-600"}">${business.reputationScore > 0 ? "+" : ""}${business.reputationScore}</span>
-    </div>
-    <p class="text-xs text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">${business.description}</p>
-    <div class="flex items-center text-xs text-gray-500 mb-2">
-      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path>
-      </svg>
-      ${business.location}
-    </div>
-    <button onclick="window.selectBusiness('${business.id}')" class="w-full text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded transition-colors">
-      View Business
-    </button>
-  </div>
-`
-
-      marker.bindPopup(popupContent, {
-        maxWidth: 300,
-        className: "custom-popup",
-      })
-
-      marker.on("click", () => {
-        onBusinessSelect?.(business)
-      })
-
-      markersRef.current.push(marker)
-    })
-
-    // Fit map to show all markers
-    if (businesses.length > 0) {
-      const group = new L.featureGroup(markersRef.current)
-      map.fitBounds(group.getBounds().pad(0.1))
     }
   }
 
-  // Global function to handle business selection from popup
-  useEffect(() => {
-    ;(window as any).selectBusiness = (businessId: string) => {
-      const business = businesses.find((b) => b.id === businessId)
-      if (business) {
-        onBusinessSelect?.(business)
-      }
-    }
+  const getMarkerPosition = (lat: number, lng: number) => {
+    const businessTile = latLngToTile(lat, lng, zoom)
+    const tileSize = 256
 
-    return () => {
-      delete (window as any).selectBusiness
-    }
-  }, [businesses, onBusinessSelect])
+    const pixelX = (businessTile.x - centerTile.x) * tileSize + (tileSize * tilesX) / 2
+    const pixelY = (businessTile.y - centerTile.y) * tileSize + (tileSize * tilesY) / 2
 
-  const toggleMapType = () => {
-    setMapType((prev) => (prev === "osm" ? "satellite" : "osm"))
+    return { x: pixelX, y: pixelY }
   }
 
-  const centerOnSelected = () => {
-    if (selectedBusiness && mapInstanceRef.current?.map) {
-      mapInstanceRef.current.map.setView([selectedBusiness.coordinates.lat, selectedBusiness.coordinates.lng], 15)
+  const getTileUrl = (x: number, y: number, z: number) => {
+    if (mapType === "satellite") {
+      return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
     }
+    return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
   }
 
   return (
-    <div className="relative" style={{ height }}>
-      {/* Map Container */}
-      <div ref={mapRef} className="w-full h-full rounded-lg overflow-hidden" />
-
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-sm text-muted-foreground">Loading map...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Map Controls */}
-      <div className="absolute top-4 right-4 flex flex-col space-y-2 z-[1000]">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={toggleMapType}
-          className="bg-background/90 backdrop-blur-sm shadow-lg"
+    <div className="relative w-full rounded-lg overflow-hidden border border-border bg-muted" style={{ height }}>
+      <div
+        ref={mapRef}
+        className={`absolute inset-0 overflow-hidden ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <div
+          className="absolute"
+          style={{
+            width: `${256 * tilesX}px`,
+            height: `${256 * tilesY}px`,
+            left: "50%",
+            top: "50%",
+            transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))`,
+            transition: isDragging ? "none" : "transform 0.2s ease-out",
+          }}
         >
-          {mapType === "osm" ? (
-            <>
-              <Satellite className="h-4 w-4 mr-2" />
-              Satellite
-            </>
-          ) : (
-            <>
-              <MapIcon className="h-4 w-4 mr-2" />
-              Map
-            </>
-          )}
-        </Button>
-
-        {selectedBusiness && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={centerOnSelected}
-            className="bg-background/90 backdrop-blur-sm shadow-lg"
-          >
-            <Navigation className="h-4 w-4" />
-          </Button>
-        )}
+          {tiles.map((tile) => (
+            <img
+              key={`${tile.x}-${tile.y}`}
+              src={getTileUrl(tile.x, tile.y, zoom) || "/placeholder.svg"}
+              alt="Map tile"
+              className="absolute"
+              style={{
+                width: "256px",
+                height: "256px",
+                left: `${(tile.offsetX + Math.floor(tilesX / 2)) * 256}px`,
+                top: `${(tile.offsetY + Math.floor(tilesY / 2)) * 256}px`,
+              }}
+              crossOrigin="anonymous"
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Selected Business Info */}
-      {selectedBusiness && (
-        <div className="absolute bottom-4 left-4 right-4 z-[1000]">
-          <Card className="shadow-lg bg-background/95 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Building2 className="h-4 w-4 text-primary" />
-                    <h3 className="font-semibold">{selectedBusiness.name}</h3>
-                    {selectedBusiness.isVerified && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700"
-                      >
-                        ✓ Verified
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Badge variant="secondary">{selectedBusiness.category}</Badge>
-                    <ReputationBadge score={selectedBusiness.reputationScore} size="sm" />
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{selectedBusiness.description}</p>
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {selectedBusiness.location}
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-background/90 backdrop-blur px-3 py-2 rounded-lg border border-border shadow-lg">
+        <Navigation className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium">Nearby Businesses</span>
+      </div>
+
+      <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <Button
+          size="sm"
+          variant={mapType === "osm" ? "default" : "secondary"}
+          className="bg-background/90 backdrop-blur shadow-lg"
+          onClick={() => setMapType("osm")}
+        >
+          Map
+        </Button>
+        <Button
+          size="sm"
+          variant={mapType === "satellite" ? "default" : "secondary"}
+          className="bg-background/90 backdrop-blur shadow-lg"
+          onClick={() => setMapType("satellite")}
+        >
+          Satellite
+        </Button>
+      </div>
+
+      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+        <Button
+          size="icon"
+          variant="secondary"
+          className="bg-background/90 backdrop-blur shadow-lg"
+          onClick={() => setZoom((z) => Math.min(z + 1, 18))}
+        >
+          +
+        </Button>
+        <Button
+          size="icon"
+          variant="secondary"
+          className="bg-background/90 backdrop-blur shadow-lg"
+          onClick={() => setZoom((z) => Math.max(z - 1, 8))}
+        >
+          −
+        </Button>
+      </div>
+
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: `${256 * tilesX}px`,
+          height: `${256 * tilesY}px`,
+          left: "50%",
+          top: "50%",
+          transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))`,
+          transition: isDragging ? "none" : "transform 0.2s ease-out",
+        }}
+      >
+        {businesses
+          .filter((b) => b.location && typeof b.location === 'object' &&
+            typeof b.location.lat === 'number' && typeof b.location.lng === 'number' &&
+            !isNaN(b.location.lat) && !isNaN(b.location.lng))
+          .map((business) => {
+          const pos = getMarkerPosition(business.location.lat, business.location.lng)
+          const isSelected = selectedBusiness?.id === business.id
+          const isHovered = hoveredBusiness === business.id
+          const markerColor = getMarkerColor(business.reputation)
+
+          return (
+            <div
+              key={business.id}
+              className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer transition-all duration-200 z-20 pointer-events-auto"
+              style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
+              onClick={() => handleBusinessClick(business)}
+              onMouseEnter={() => setHoveredBusiness(business.id)}
+              onMouseLeave={() => setHoveredBusiness(null)}
+            >
+              <div
+                className={`relative transition-all duration-200 ${isSelected || isHovered ? "scale-125" : "scale-100"}`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center ${markerColor}`}
+                >
+                  <MapPin className="h-4 w-4 text-white" fill="white" />
+                </div>
+                {(isSelected || isHovered) && (
+                  <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+                )}
+              </div>
+
+              {isHovered && !isSelected && (
+                <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none">
+                  <div className="bg-background/95 backdrop-blur border border-border rounded-lg shadow-lg p-2 min-w-[180px]">
+                    <p className="font-semibold text-sm">{business.name}</p>
+                    <p className="text-xs text-muted-foreground">{business.category}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs font-medium">
+                        {business.reputation > 0 ? "+" : ""}
+                        {business.reputation}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{business.totalAds} ads</span>
+                    </div>
                   </div>
                 </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {showDetailModal && selectedBusiness && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+              <div className="flex items-start space-x-4">
+                <div className="relative w-16 h-16 flex-shrink-0">
+                  <Image
+                    src={selectedBusiness.imageUrl || "/placeholder.svg"}
+                    alt={`${selectedBusiness.name} logo`}
+                    fill
+                    className="object-cover rounded-lg"
+                    sizes="64px"
+                  />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">{selectedBusiness.name}</CardTitle>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="secondary">{selectedBusiness.category}</Badge>
+                    <Badge variant={selectedBusiness.reputation >= 60 ? "default" : "secondary"}>
+                      {selectedBusiness.reputation > 0 ? "+" : ""}
+                      {selectedBusiness.reputation} reputation
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setShowDetailModal(false)
+                  onBusinessSelect(null)
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4 overflow-y-auto max-h-[calc(80vh-120px)]">
+              <p className="text-sm text-muted-foreground">{selectedBusiness.description}</p>
+
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    {selectedBusiness.location.address}, {selectedBusiness.location.city}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span>{selectedBusiness.totalAds} active ads</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold">Latest Ads</h3>
+                <div className="grid gap-3">
+                  {getBusinessAds(selectedBusiness.id)
+                    .slice(0, 6)
+                    .map((ad) => (
+                      <Link key={ad.id} href={`/ads/${ad.id}`}>
+                        <div className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                          <div className="relative w-16 h-16 flex-shrink-0">
+                            <Image
+                              src={ad.imageUrl || "/placeholder.svg"}
+                              alt={ad.title}
+                              fill
+                              className="object-cover rounded"
+                              sizes="64px"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm line-clamp-1">{ad.title}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{ad.description}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="outline" className="text-xs">
+                                {ad.category}
+                              </Badge>
+                              <span className="text-xs font-medium">${ad.budget.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        </div>
+                      </Link>
+                    ))}
+                </div>
+                <Button variant="outline" className="w-full bg-transparent" asChild>
+                  <Link href={`/businesses/${selectedBusiness.id}`}>View All Ads from {selectedBusiness.name}</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Map Attribution */}
-      <div className="absolute bottom-2 left-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded z-[1000]">
-        {mapType === "osm" ? "© OpenStreetMap contributors" : "© Esri, ArcGIS"}
+      <div className="absolute bottom-1 right-1 z-[999] text-[10px] bg-background/80 px-1 rounded">
+        {mapType === "osm" ? "© OpenStreetMap" : "© Esri"}
       </div>
     </div>
   )
