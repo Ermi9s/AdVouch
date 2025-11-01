@@ -89,7 +89,7 @@ export default function AdvertiserDashboardPage() {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-background theme-advertiser flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Loading...</p>
@@ -99,7 +99,7 @@ export default function AdvertiserDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background theme-advertiser">
+    <div className="min-h-screen bg-background">
       {showBanner && <ProfileCompletionBanner mode="advertiser" />}
 
       <div className="container mx-auto px-4 py-8">

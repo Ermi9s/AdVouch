@@ -15,10 +15,8 @@ type JWTtoken struct {
 }
 
 func NewJWT() (*JWTtoken, error) {
-	// Try to read existing private key file
 	privData, err := os.ReadFile("/auth/private.pem")
 	if err != nil {
-		// If file doesn't exist, generate a new RSA key pair
 		log.Println("Private key file not found, generating new RSA key pair...")
 		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
@@ -32,7 +30,6 @@ func NewJWT() (*JWTtoken, error) {
 		}, nil
 	}
 
-	// Parse existing private key
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privData)
 	if err != nil {
 		log.Println("Error parsing private key:", err)

@@ -1,4 +1,3 @@
-// API service layer for AdVouch backend
 import { getAccessTokenCache, setAccessTokenCache, refreshToken as refreshAuthToken } from './api-client'
 import type {
   User,
@@ -13,11 +12,10 @@ import type {
   PaginatedResponse,
 } from './types'
 
-// Base URLs
 const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_BASE_URL || 'http://localhost:8080'
 const RESOURCE_BASE_URL = process.env.NEXT_PUBLIC_RESOURCE_BASE_URL || 'http://localhost:8000'
 
-// Generic API request handler with automatic token refresh
+
 async function apiRequest<T>(
   url: string,
   options: RequestInit = {},
@@ -30,8 +28,10 @@ async function apiRequest<T>(
     ...options.headers,
   }
 
+  console.log(url, useAuth, "info")
   if (token && useAuth) {
     headers['Authorization'] = `Bearer ${token}`
+    console.log("token", token)
   }
 
   let response = await fetch(url, {
@@ -69,14 +69,10 @@ async function apiRequest<T>(
   return response.json()
 }
 
-// ============================================================================
-// USER API
-// ============================================================================
-
 export const userApi = {
   getMe: () => apiRequest<User>(`${RESOURCE_BASE_URL}/api/v1/me/`),
 
-  // Sync user profile from OAuth (Fayda eSignet is source of truth)
+
   syncProfile: (userInfo: any) =>
     apiRequest<{ message: string; data: User }>(`${RESOURCE_BASE_URL}/api/v1/me/sync/`, {
       method: 'POST',
@@ -164,7 +160,7 @@ export const adsApi = {
 
   getMyAds: () =>
     apiRequest<PaginatedResponse<Ad>>(
-      `${RESOURCE_BASE_URL}/api/v1/ads/my/`
+      `${RESOURCE_BASE_URL}/api/v1/ads/my/`,
     ),
 
   create: (data: Partial<Ad>) =>
@@ -185,7 +181,13 @@ export const adsApi = {
     }),
 
   getById: (id: string | number) =>
-    apiRequest<Ad>(`${RESOURCE_BASE_URL}/api/v1/ads/${id}/`),
+    apiRequest<Ad>(`${RESOURCE_BASE_URL}/api/v1/ads/${id}/`, 
+        {
+        method: 'GET',
+        },
+      false
+
+    ),
 
   getEmbedCode: (id: string | number) =>
     apiRequest<{

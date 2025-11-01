@@ -145,8 +145,7 @@ export default function AdDetailPage({ params }: { params: Promise<{ id: string 
     notFound()
   }
 
-  const themeClass =
-    user?.mode === "business" ? "theme-business" : user?.mode === "advertiser" ? "theme-advertiser" : ""
+  
 
   const getModeCTA = () => {
     switch (user?.mode) {
@@ -226,7 +225,7 @@ export default function AdDetailPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <div className={`min-h-screen bg-background ${themeClass}`}>
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">

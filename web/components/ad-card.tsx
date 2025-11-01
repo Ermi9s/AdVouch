@@ -37,7 +37,7 @@ export function AdCard({ ad, userMode }: AdCardProps) {
         {/* Smaller Image - Left Side */}
         <div className="w-32 h-24 flex-shrink-0 relative overflow-hidden rounded-md bg-muted">
           <img
-            src="/placeholder.svg"
+            src={ad.imageUrl || "/placeholder.svg"}
             alt={ad.title}
             className="object-cover w-full h-full"
           />

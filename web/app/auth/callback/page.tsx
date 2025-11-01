@@ -21,7 +21,8 @@ export default function AuthCallbackPage() {
       console.log("[v0] Processing authentication callback")
 
       // Get parameters from URL - Fayda returns 'code' and 'state'
-      const code = searchParams.get("code")
+      //  "/auth/callback?session_id=mock-session&auth_code=mock-code&state=mock-state",
+      const code = searchParams.get("auth_code")
       const state = searchParams.get("state")
 
       console.log("[v0] Callback params:", { code, state })
@@ -33,7 +34,7 @@ export default function AuthCallbackPage() {
         throw new Error("Missing authentication parameters")
       }
 
-      console.log("[v0] Calling authenticate API")
+      console.log("[v0] Calling authenticate API") 
 
       // The 'state' parameter from Fayda is the CSRF token
       const { access_token, refresh_token, user } = await authenticate(sessionId, state, code)

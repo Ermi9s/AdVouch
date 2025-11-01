@@ -1,4 +1,5 @@
 "use client"
+import { ThemeSwitcher } from "./theme-switcher"
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
@@ -186,6 +187,7 @@ export function UnifiedHeader() {
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-3">
+          <ThemeSwitcher />
           {/* Mode Switcher - Only for authenticated users */}
           {user && <GlobalModeSwitcher variant="header" />}
 

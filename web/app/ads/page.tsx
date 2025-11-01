@@ -135,8 +135,7 @@ export default function AdsPage() {
     router.push("/auth")
   }
 
-  const themeClass =
-    user?.mode === "business" ? "theme-business" : user?.mode === "advertiser" ? "theme-advertiser" : ""
+  
 
   const getModeContent = () => {
     switch (user?.mode) {
@@ -164,8 +163,7 @@ export default function AdsPage() {
   const modeContent = getModeContent()
 
   return (
-    <div className={`min-h-screen bg-background ${themeClass}`}>
-      {!isAuthenticated && <SignInBanner />}
+    <div className="min-h-screen bg-background">
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

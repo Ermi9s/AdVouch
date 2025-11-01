@@ -96,7 +96,7 @@ export default function BusinessDashboardPage() {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-background theme-business flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Loading...</p>
@@ -106,7 +106,7 @@ export default function BusinessDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background theme-business">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Business Switcher */}
         <div className="mb-6">

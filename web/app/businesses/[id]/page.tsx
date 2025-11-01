@@ -119,8 +119,7 @@ export default function BusinessDetailPage() {
     )
   }
 
-  const themeClass =
-    user?.mode === "business" ? "theme-business" : user?.mode === "advertiser" ? "theme-advertiser" : ""
+  
 
   const getReputationColor = (reputation: number) => {
     if (reputation >= 80) return "text-green-500"
@@ -146,7 +145,7 @@ export default function BusinessDetailPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-background ${themeClass}`}>
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">

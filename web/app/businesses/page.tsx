@@ -82,8 +82,7 @@ export default function BusinessesPage() {
     router.push("/auth")
   }
 
-  const themeClass =
-    user?.mode === "business" ? "theme-business" : user?.mode === "advertiser" ? "theme-advertiser" : ""
+  
 
   const getModeContent = () => {
     switch (user?.mode) {
@@ -125,7 +124,7 @@ export default function BusinessesPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-background ${themeClass}`}>
+    <div className="min-h-screen bg-background">
       {!isAuthenticated && <SignInBanner />}
 
       <div className="container mx-auto px-4 py-8">

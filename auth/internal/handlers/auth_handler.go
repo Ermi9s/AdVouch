@@ -435,11 +435,8 @@ func (h *FaydaOAuthHandler) Authenticate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Create a copy of userInfo without the picture for the JWT token
-	// (to avoid huge token sizes that cause header limit errors)
 	userInfoForToken := make(map[string]interface{})
 	for key, value := range userInfo {
-		// Exclude the picture field from the token
 		if key != "picture" {
 			userInfoForToken[key] = value
 		}
@@ -614,7 +611,6 @@ func (h *FaydaOAuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 			expTime := time.Unix(int64(expFloat), 0)
 
-			// Compare with current time
 			now := time.Now()
 			if expTime.Before(now) || expTime.Equal(now) {
 				log.Printf("[ERROR] Refresh: Token expired for sub=%s", sub)
@@ -689,11 +685,8 @@ func (h *FaydaOAuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create a copy of userInfo without the picture for the JWT token
-	// (to avoid huge token sizes that cause header limit errors)
 	userInfoForToken := make(map[string]interface{})
 	for key, value := range userInfo {
-		// Exclude the picture field from the token
 		if key != "picture" {
 			userInfoForToken[key] = value
 		}
